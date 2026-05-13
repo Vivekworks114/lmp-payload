@@ -4,6 +4,14 @@ import { TENANT } from '../consts';
 
 const year = new Date().getFullYear();
 
+// Payload-driven footer menus. When the editor has assigned ANY menu with
+// location === 'footer' in the admin, those become the source of truth and
+// REPLACE the hardcoded `categoryGroups` columns below. When none are set,
+// the hardcoded columns serve as a fallback so a fresh tenant still ships
+// with a usable footer. Same pattern as SiteHeader.astro.
+const footerMenus = TENANT.navMenus.filter((m) => m.location === 'footer');
+const useDynamicFooter = footerMenus.length > 0;
+
 // Latest 6 blog posts for the "Laatste tips" column.
 const latestTips = (await getCollection('blog'))
 	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
@@ -103,25 +111,46 @@ const featuredBusinesses = [
 				</nav>
 			</div>
 
-			{categoryGroups.map((group) => (
-				<nav aria-label={group.title}>
-					<h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-navy-900">
-						{group.title}
-					</h2>
-					<ul class="space-y-2 text-sm">
-						{group.links.map((link) => (
-							<li>
-								<a
-									href={`/${link.slug}/`}
-									class="no-underline hover:text-coral-600"
-								>
-									{link.label}
-								</a>
-							</li>
-						))}
-					</ul>
-				</nav>
-			))}
+			{useDynamicFooter
+				? footerMenus.map((menu) => (
+						<nav aria-label={menu.name}>
+							<h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-navy-900">
+								{menu.name}
+							</h2>
+							<ul class="space-y-2 text-sm">
+								{menu.items.map((item) => (
+									<li>
+										<a
+											href={item.href}
+											rel={item.rel ?? undefined}
+											class="no-underline hover:text-coral-600"
+										>
+											{item.label}
+										</a>
+									</li>
+								))}
+							</ul>
+						</nav>
+					))
+				: categoryGroups.map((group) => (
+						<nav aria-label={group.title}>
+							<h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-navy-900">
+								{group.title}
+							</h2>
+							<ul class="space-y-2 text-sm">
+								{group.links.map((link) => (
+									<li>
+										<a
+											href={`/${link.slug}/`}
+											class="no-underline hover:text-coral-600"
+										>
+											{link.label}
+										</a>
+									</li>
+								))}
+							</ul>
+						</nav>
+					))}
 		</div>
 
 		<!-- SECONDARY ROW: Laatste tips + Keukenwinkel -->

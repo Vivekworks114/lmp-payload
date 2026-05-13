@@ -1,9 +1,0 @@
-{
-  "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*", "tenant.config.json"],
-  "exclude": ["dist", "node_modules"],
-  "compilerOptions": {
-    "strictNullChecks": true,
-    "resolveJsonModule": true
-  }
-}
