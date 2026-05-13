@@ -1,0 +1,127 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Self-hosted Inter (variable, Latin subset). Two files — wght-normal +
+   wght-italic — together cover every weight (100–900) via the wght axis.
+   font-display: swap keeps text visible while the WOFF2 loads. */
+@font-face {
+	font-family: "Inter";
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url("/fonts/inter-variable.woff2") format("woff2-variations");
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+	font-family: "Inter";
+	font-style: italic;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url("/fonts/inter-variable-italic.woff2") format("woff2-variations");
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+  Design tokens. Tailwind v4 exposes these as both CSS custom properties
+  (--color-navy-700) and utility classes (bg-navy-700, text-navy-700, …).
+*/
+@theme {
+	--color-navy-900: #0f172a;
+	--color-navy-800: #1e293b;
+	--color-navy-700: #1e3a8a; /* primary brand */
+	--color-navy-600: #1e40af; /* primary hover */
+
+	--color-coral-600: #ea580c; /* CTA accent */
+	--color-coral-700: #c2410c; /* CTA hover */
+
+	--color-gray-50: #f8fafc;
+	--color-gray-100: #f1f5f9;
+	--color-gray-200: #e2e8f0;
+	--color-gray-500: #64748b;
+	--color-gray-600: #475569; /* 5.77:1 on gray-100 — passes WCAG AA body */
+	--color-gray-900: #0f172a;
+
+	--font-sans: "Inter", system-ui, sans-serif;
+}
+
+/*
+  Base element defaults. Wrapped in @layer base so Tailwind utilities
+  (which live in @layer utilities) always win on conflicting rules.
+*/
+@layer base {
+	html {
+		scroll-behavior: smooth;
+	}
+	body {
+		font-family: var(--font-sans);
+		color: var(--color-gray-900);
+		background: #fff;
+		line-height: 1.625;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		text-rendering: optimizeLegibility;
+	}
+	h1, h2, h3, h4, h5, h6 {
+		font-family: var(--font-sans);
+		font-weight: 700;
+		line-height: 1.2;
+		color: var(--color-navy-900);
+	}
+	:is(main, article) p {
+		max-width: 65ch;
+	}
+	a {
+		color: var(--color-navy-700);
+		text-decoration: underline;
+		transition: color 0.15s ease;
+	}
+	a:hover {
+		color: var(--color-coral-600);
+	}
+	:focus-visible {
+		outline: 2px solid var(--color-navy-700);
+		outline-offset: 2px;
+	}
+}
+
+/*
+  Reusable component classes. @layer components sits between base and
+  utilities — utilities can still override individual properties, but
+  the component defaults beat raw element rules (e.g. the base `a` color).
+*/
+@layer components {
+	.btn {
+		display: inline-block;
+		padding: 0.75rem 1.5rem;
+		background-color: var(--color-coral-600);
+		color: #fff;
+		font-weight: 600;
+		border-radius: 0.5rem;
+		text-decoration: none;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+	.btn:hover,
+	.btn:focus {
+		background-color: var(--color-coral-700);
+		color: #fff;
+		text-decoration: none;
+	}
+
+	/*
+	  Typography plugin colour overrides. Matches the site link style:
+	  navy default, coral on hover. Headings and bold ink in navy-900.
+	*/
+	.prose {
+		--tw-prose-body: var(--color-gray-900);
+		--tw-prose-headings: var(--color-navy-900);
+		--tw-prose-links: var(--color-navy-700);
+		--tw-prose-bold: var(--color-navy-900);
+		--tw-prose-counters: var(--color-gray-500);
+		--tw-prose-bullets: var(--color-gray-200);
+		--tw-prose-quote-borders: var(--color-coral-600);
+		--tw-prose-captions: var(--color-gray-500);
+	}
+	.prose a:hover {
+		color: var(--color-coral-600);
+	}
+}
