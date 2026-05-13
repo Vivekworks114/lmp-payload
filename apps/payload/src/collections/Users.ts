@@ -2,6 +2,22 @@ import type { CollectionConfig } from 'payload'
 
 import { isSuperAdmin } from '../access/isSuperAdmin'
 
+/**
+ * Decide whether to set the `Secure` flag on the auth cookie:
+ *   - Set PAYLOAD_COOKIE_SECURE=false  → cookies work over plain http://
+ *     (use this when running on a server without SSL yet — e.g.
+ *     http://your-ip:3000 or http://yourdomain.com).
+ *   - Set PAYLOAD_COOKIE_SECURE=true   → force secure cookies (HTTPS only).
+ *   - Leave unset → defaults to: secure only if PAYLOAD_PUBLIC_SERVER_URL
+ *     starts with https://. This is the right default for almost everyone.
+ */
+const cookieSecure = (() => {
+  const explicit = process.env.PAYLOAD_COOKIE_SECURE
+  if (explicit === 'true') return true
+  if (explicit === 'false') return false
+  return process.env.PAYLOAD_PUBLIC_SERVER_URL?.startsWith('https://') ?? false
+})()
+
 export const Users: CollectionConfig = {
   slug: 'users',
   admin: {
@@ -9,7 +25,16 @@ export const Users: CollectionConfig = {
     defaultColumns: ['email', 'roles'],
     group: 'Platform',
   },
-  auth: true,
+  auth: {
+    cookies: {
+      // SameSite=lax + Secure (when on HTTPS) is the right combo for an
+      // admin reached from its own origin. When deploying behind a reverse
+      // proxy that terminates TLS, X-Forwarded-Proto must be set so Next.js
+      // sees the request as https.
+      sameSite: 'Lax',
+      secure: cookieSecure,
+    },
+  },
   access: {
     admin: ({ req }) => Boolean(req.user),
     read: ({ req }) => {
