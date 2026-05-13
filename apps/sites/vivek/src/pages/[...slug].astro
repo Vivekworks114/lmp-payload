@@ -1,0 +1,72 @@
+---
+import { getCollection, render } from 'astro:content';
+import BlogPostLayout from '../layouts/BlogPostLayout.astro';
+import StaticPageLayout from '../layouts/StaticPageLayout.astro';
+import TopTenLayout from '../layouts/TopTenLayout.astro';
+import ProductLayout from '../layouts/ProductLayout.astro';
+import BusinessLayout from '../layouts/BusinessLayout.astro';
+
+export async function getStaticPaths() {
+	const [blogEntries, pageEntries, moneyEntries] = await Promise.all([
+		getCollection('blog'),
+		getCollection('pages'),
+		getCollection('moneyPages'),
+	]);
+
+	// Render top10, product, and business money pages. unknown stays excluded.
+	const renderableMoney = moneyEntries.filter(
+		(e) =>
+			e.data.page_type === 'top10' ||
+			e.data.page_type === 'product' ||
+			e.data.page_type === 'business'
+	);
+
+	return [
+		...blogEntries.map((entry) => ({
+			params: { slug: entry.id },
+			props: { entry, collection: 'blog' as const },
+		})),
+		...pageEntries.map((entry) => ({
+			params: { slug: entry.id },
+			props: { entry, collection: 'pages' as const },
+		})),
+		...renderableMoney.map((entry) => ({
+			params: { slug: entry.data.slug },
+			props: { entry, collection: 'moneyPages' as const },
+		})),
+	];
+}
+
+const { entry, collection } = Astro.props;
+
+// Markdown collections need render(); moneyPages are pure-data.
+const rendered =
+	collection === 'blog' || collection === 'pages'
+		? await render(entry)
+		: null;
+const Content = rendered?.Content;
+---
+
+{collection === 'blog' && Content && (
+	<BlogPostLayout entry={entry}>
+		<Content />
+	</BlogPostLayout>
+)}
+
+{collection === 'pages' && Content && (
+	<StaticPageLayout entry={entry}>
+		<Content />
+	</StaticPageLayout>
+)}
+
+{collection === 'moneyPages' && entry.data.page_type === 'top10' && (
+	<TopTenLayout data={entry.data} />
+)}
+
+{collection === 'moneyPages' && entry.data.page_type === 'product' && (
+	<ProductLayout data={entry.data} />
+)}
+
+{collection === 'moneyPages' && entry.data.page_type === 'business' && (
+	<BusinessLayout data={entry.data} />
+)}

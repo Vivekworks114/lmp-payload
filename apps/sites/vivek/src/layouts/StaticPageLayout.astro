@@ -1,0 +1,30 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from './BaseLayout.astro';
+import { TENANT } from '../consts';
+
+interface Props {
+	entry: CollectionEntry<'pages'>;
+}
+
+const { entry } = Astro.props;
+const { title, description } = entry.data;
+---
+
+<BaseLayout
+	title={`${title} — ${TENANT.name}`}
+	description={description ?? title}
+>
+	<article>
+		<header class="mx-auto max-w-3xl px-4 pb-6 pt-12 md:pt-16">
+			<h1 class="text-3xl font-bold tracking-tight text-navy-900 md:text-5xl">
+				{title}
+			</h1>
+		</header>
+		<div class="mx-auto max-w-3xl px-4 pb-16">
+			<div class="prose prose-lg mx-auto">
+				<slot />
+			</div>
+		</div>
+	</article>
+</BaseLayout>
