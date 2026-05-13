@@ -22,6 +22,29 @@ import { isSuperAdmin } from './access/isSuperAdmin'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
+/**
+ * Build the CORS / CSRF allow-list from env:
+ *   - PAYLOAD_PUBLIC_SERVER_URL          (always included if set)
+ *   - PAYLOAD_ALLOWED_ORIGINS            (comma-separated extras)
+ *   - http://localhost:3000              (always included in dev for convenience)
+ *
+ * Trailing slashes are stripped because Payload compares origins literally.
+ */
+function buildOriginList(): string[] {
+  const list = new Set<string>()
+  const server = process.env.PAYLOAD_PUBLIC_SERVER_URL?.replace(/\/+$/, '')
+  if (server) list.add(server)
+  const extra = process.env.PAYLOAD_ALLOWED_ORIGINS?.split(',') ?? []
+  for (const o of extra) {
+    const trimmed = o.trim().replace(/\/+$/, '')
+    if (trimmed) list.add(trimmed)
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    list.add('http://localhost:3000')
+  }
+  return Array.from(list)
+}
+
 export default buildConfig({
   admin: {
     user: Users.slug,
@@ -58,6 +81,14 @@ export default buildConfig({
 
   secret: process.env.PAYLOAD_SECRET || '',
   serverURL: process.env.PAYLOAD_PUBLIC_SERVER_URL,
+
+  // Allow the public server URL (and any additional comma-separated origins via
+  // PAYLOAD_ALLOWED_ORIGINS) to send/receive auth cookies. Without this, a
+  // reverse-proxied production deploy reaches the login endpoint but the
+  // browser refuses to send the cookie on subsequent requests — surfaces as
+  // 401 on /api/tenants/populate-tenant-options (and every other admin call).
+  cors: buildOriginList(),
+  csrf: buildOriginList(),
 
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),

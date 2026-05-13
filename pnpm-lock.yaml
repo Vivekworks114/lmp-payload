@@ -91,7 +91,7 @@ importers:
         specifier: ^5.6.2
         version: 5.9.3
 
-  apps/sites/keukenfaqs:
+  apps/sites/devcorebit:
     dependencies:
       '@astrojs/cloudflare':
         specifier: ^13.5.0
@@ -155,7 +155,7 @@ importers:
         specifier: ^4.84.0
         version: 4.90.1(@cloudflare/workers-types@4.20260511.1)
 
-  apps/sites/vivek:
+  apps/sites/keukenfaqs:
     dependencies:
       '@astrojs/cloudflare':
         specifier: ^13.5.0
