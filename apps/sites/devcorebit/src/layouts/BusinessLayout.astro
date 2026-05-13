@@ -1,0 +1,204 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+	data: {
+		slug: string;
+		title: string;
+		meta_description: string | null;
+		last_updated: string | null;
+		business: {
+			name: string | null;
+			city: string | null;
+			address: string | null;
+			website_url: string | null;
+			google_maps_url: string | null;
+			intro: string | null;
+		};
+	};
+}
+
+const { data } = Astro.props;
+const { title, meta_description, business } = data;
+const name = business.name ?? title;
+const hasIntro = !!business.intro;
+
+// Strip protocol and path, show domain only. Preserve the full URL for href.
+function displayDomain(url: string): string {
+	try {
+		return new URL(url).hostname.replace(/^www\./, '');
+	} catch {
+		return url;
+	}
+}
+
+// Build the "other keukenzaken in {city}" grid from the moneyPages collection
+// at build time. Filter the collection to business entries first, then match
+// on city and exclude self. Capped at 6.
+const allBusinesses = await getCollection(
+	'moneyPages',
+	(e) => e.data.page_type === 'business'
+);
+const related = business.city
+	? allBusinesses
+			.filter(
+				(e) =>
+					e.data.page_type === 'business' &&
+					e.data.business.city === business.city &&
+					e.data.slug !== data.slug
+			)
+			.slice(0, 6)
+	: [];
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const jsonLd: Record<string, unknown> = {
+	'@context': 'https://schema.org',
+	'@type': 'LocalBusiness',
+	name,
+	url: canonicalUrl,
+	...(business.intro ? { description: business.intro } : {}),
+	...(business.address || business.city
+		? {
+				address: {
+					'@type': 'PostalAddress',
+					...(business.address ? { streetAddress: business.address } : {}),
+					...(business.city ? { addressLocality: business.city } : {}),
+					addressCountry: 'NL',
+				},
+			}
+		: {}),
+	...(business.website_url ? { sameAs: [business.website_url] } : {}),
+};
+---
+
+<BaseLayout title={title} description={meta_description ?? title} jsonLd={jsonLd}>
+	<article>
+		<!-- HERO -->
+		<section class="mx-auto max-w-4xl px-4 pb-6 pt-12 md:pt-16">
+			<p class="text-sm font-semibold uppercase tracking-wide text-gray-500">
+				Keukenzaak
+			</p>
+			<h1 class="mt-1 text-3xl font-bold leading-tight tracking-tight text-navy-700 md:text-5xl">
+				{name}
+			</h1>
+			{business.city && (
+				<p class="mt-2 text-lg text-gray-500">in {business.city}</p>
+			)}
+		</section>
+
+		<!-- INFO CARD -->
+		<section class="mx-auto max-w-4xl px-4 pb-10">
+			<div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+				<div class="grid gap-6 md:grid-cols-2 md:items-start">
+					<div class="space-y-4">
+						<div>
+							<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">
+								Adres
+							</h2>
+							{business.address ? (
+								<p class="mt-2 text-base text-gray-900">{business.address}</p>
+							) : (
+								<p class="mt-2 text-base italic text-gray-500">
+									Adres niet beschikbaar
+								</p>
+							)}
+							{business.city && (
+								<p class="text-base text-gray-900">{business.city}</p>
+							)}
+						</div>
+
+						{business.website_url && (
+							<div>
+								<h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500">
+									Website
+								</h2>
+								<p class="mt-2 text-base">
+									<a
+										href={business.website_url}
+										target="_blank"
+										rel="noopener"
+										class="text-navy-700 no-underline hover:text-coral-600 hover:underline"
+									>
+										{displayDomain(business.website_url)}
+									</a>
+								</p>
+							</div>
+						)}
+					</div>
+
+					<div class="flex flex-col gap-3">
+						{business.website_url && (
+							<a
+								href={business.website_url}
+								target="_blank"
+								rel="noopener"
+								class="inline-flex items-center justify-center gap-2 rounded-lg bg-navy-700 px-5 py-2.5 font-semibold text-white no-underline transition-colors hover:bg-navy-800 hover:text-white"
+							>
+								Bezoek website
+								<svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M7 13l6-6M9 6h4v4" />
+								</svg>
+							</a>
+						)}
+						{business.google_maps_url && (
+							<a
+								href={business.google_maps_url}
+								target="_blank"
+								rel="noopener"
+								class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 font-semibold text-gray-900 no-underline transition-colors hover:border-navy-700 hover:text-navy-700"
+							>
+								Route plannen
+								<svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M7 13l6-6M9 6h4v4" />
+								</svg>
+							</a>
+						)}
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- OVER -->
+		{hasIntro && (
+			<section class="mx-auto max-w-3xl px-4 pb-16">
+				<h2 class="text-2xl font-bold text-navy-700 md:text-3xl">
+					Over {name}
+				</h2>
+				<div class="prose prose-lg mx-auto mt-4">
+					<p>{business.intro}</p>
+				</div>
+			</section>
+		)}
+
+		<!-- RELATED -->
+		{related.length > 0 && (
+			<section class="mx-auto max-w-4xl px-4 pb-16">
+				<h2 class="text-2xl font-bold text-navy-700 md:text-3xl">
+					Andere keukenzaken in {business.city}
+				</h2>
+				<ul class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+					{related.map((r) => (
+						r.data.page_type === 'business' && (
+							<li>
+								<a
+									href={`/${r.data.slug}/`}
+									class="block rounded-lg border border-gray-200 bg-white p-4 no-underline transition-colors hover:border-navy-700"
+								>
+									<p class="line-clamp-2 font-bold text-navy-700">
+										{r.data.business.name ?? r.data.title}
+									</p>
+									{r.data.business.city && (
+										<p class="mt-1 text-sm text-gray-500">
+											{r.data.business.city}
+										</p>
+									)}
+								</a>
+							</li>
+						)
+					))}
+				</ul>
+			</section>
+		)}
+	</article>
+</BaseLayout>

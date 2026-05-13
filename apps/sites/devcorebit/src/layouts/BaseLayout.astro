@@ -1,0 +1,128 @@
+---
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import { TENANT, SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+import { themeTokensToCssVars } from '@astropayload/core';
+import '../styles/global.css';
+
+interface Props {
+	title?: string;
+	description?: string;
+	canonical?: string;
+	ogImage?: string;
+	ogType?: 'website' | 'article' | 'product';
+	preloadImage?: string;
+	jsonLd?: object | object[];
+}
+
+const {
+	title = SITE_TITLE,
+	description = SITE_DESCRIPTION,
+	canonical,
+	ogImage,
+	ogType = 'website',
+	preloadImage,
+	jsonLd,
+} = Astro.props;
+
+const fullTitle = TENANT.titleSuffix && !title.endsWith(TENANT.titleSuffix)
+	? `${title}${TENANT.titleSuffix}`
+	: title;
+const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).toString();
+const fallbackOg = TENANT.ogImage ?? '/og-default.png';
+const resolvedOg = ogImage ?? fallbackOg;
+const ogImageUrl = resolvedOg.startsWith('http')
+	? resolvedOg
+	: new URL(resolvedOg, Astro.site).toString();
+const jsonLdString = jsonLd ? JSON.stringify(jsonLd, null, 0) : null;
+const themeCss = themeTokensToCssVars(TENANT.themeTokens);
+const robots = TENANT.robots ?? 'index,follow';
+---
+
+<!doctype html>
+<html lang={TENANT.locale}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content={robots} />
+
+		<title>{fullTitle}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonicalUrl} />
+
+		{TENANT.favicon ? (
+			<link rel="icon" href={TENANT.favicon} />
+		) : (
+			<>
+				<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+				<link rel="icon" href="/favicon.ico" />
+			</>
+		)}
+
+		<!-- Resource hints. -->
+		<link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+		<link rel="dns-prefetch" href="https://partner.bol.com" />
+		<link rel="dns-prefetch" href="https://www.awin1.com" />
+
+		<!-- Self-hosted Inter (variable WOFF2). Tenants override via theme tokens. -->
+		<link
+			rel="preload"
+			href="/fonts/inter-variable.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+
+		{preloadImage && <link rel="preload" as="image" href={preloadImage} />}
+
+		<meta property="og:type" content={ogType} />
+		<meta property="og:locale" content={TENANT.locale.replace('-', '_')} />
+		<meta property="og:site_name" content={TENANT.name} />
+		<meta property="og:title" content={fullTitle} />
+		<meta property="og:description" content={description} />
+		<meta property="og:url" content={canonicalUrl} />
+		<meta property="og:image" content={ogImageUrl} />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={fullTitle} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={ogImageUrl} />
+
+		<meta name="generator" content={Astro.generator} />
+
+		{themeCss && <style set:html={themeCss} />}
+
+		{jsonLdString && <script type="application/ld+json" set:html={jsonLdString} />}
+
+		{TENANT.ga4Id && (
+			<>
+				<script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${TENANT.ga4Id}`}></script>
+				<script is:inline define:vars={{ ga4Id: TENANT.ga4Id }}>
+					window.dataLayer = window.dataLayer || [];
+					function gtag(){dataLayer.push(arguments);}
+					gtag('js', new Date());
+					gtag('config', ga4Id);
+				</script>
+			</>
+		)}
+
+		{TENANT.plausibleDomain && (
+			<script is:inline defer data-domain={TENANT.plausibleDomain} src="https://plausible.io/js/script.js"></script>
+		)}
+	</head>
+	<body class="flex min-h-screen flex-col">
+		<a
+			href="#main"
+			class="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-navy-700 focus:px-3 focus:py-2 focus:text-white focus:no-underline"
+		>
+			Ga naar inhoud
+		</a>
+		<SiteHeader />
+		<main id="main" class="flex-1">
+			<slot />
+		</main>
+		<SiteFooter />
+	</body>
+</html>
