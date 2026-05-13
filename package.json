@@ -18,7 +18,7 @@
     "payload:build": "pnpm --filter @astropayload/payload run build",
     "payload:start": "pnpm --filter @astropayload/payload run start",
     "payload:types": "pnpm --filter @astropayload/payload run generate:types",
-    "tenant-cli": "pnpm --filter @astropayload/tenant-cli exec tenant-cli",
+    "tenant-cli": "pnpm --filter @astropayload/tenant-cli exec tsx src/index.ts",
     "site": "pnpm --filter",
     "keukenfaqs:dev": "pnpm --filter @astropayload/site-keukenfaqs run dev",
     "keukenfaqs:build": "pnpm --filter @astropayload/site-keukenfaqs run build",

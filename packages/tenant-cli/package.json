@@ -3,10 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "bin": {
-    "tenant-cli": "./src/index.ts"
-  },
   "scripts": {
+    "tenant-cli": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "echo \"no lint\""
   },

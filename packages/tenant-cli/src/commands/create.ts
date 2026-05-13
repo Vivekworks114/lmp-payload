@@ -18,9 +18,15 @@ export async function runCreate(args: ParsedArgs): Promise<void> {
   const slug = requireFlag(args, 'slug')
   const domain = requireFlag(args, 'domain')
   const name = optionalFlag(args, 'name') ?? slug
-  const cwd = process.cwd()
-  const template = path.resolve(optionalFlag(args, 'template') ?? path.join(cwd, 'apps/sites/keukenfaqs'))
-  const destination = path.resolve(path.join(cwd, 'apps/sites', slug))
+  // Anchor paths to the directory where the user originally invoked `pnpm`,
+  // NOT to process.cwd() — which `pnpm --filter ... exec` changes to the
+  // tenant-cli package folder, breaking relative paths like `apps/sites/...`.
+  const cwd = process.env.INIT_CWD || process.env.PWD || process.cwd()
+  const templateFlag = optionalFlag(args, 'template')
+  const template = templateFlag
+    ? path.resolve(cwd, templateFlag)
+    : path.resolve(cwd, 'apps/sites/keukenfaqs')
+  const destination = path.resolve(cwd, 'apps/sites', slug)
 
   if (await exists(destination)) {
     throw new Error(`Destination already exists: ${destination}`)
