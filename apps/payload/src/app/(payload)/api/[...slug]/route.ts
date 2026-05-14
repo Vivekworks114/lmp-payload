@@ -22,19 +22,33 @@ function debugWrap<T extends (...args: any[]) => Promise<Response> | Response>(
     const headers: Record<string, string | null> = {
       origin: req.headers.get('origin'),
       'sec-fetch-site': req.headers.get('sec-fetch-site'),
-      'sec-fetch-mode': req.headers.get('sec-fetch-mode'),
-      'sec-fetch-dest': req.headers.get('sec-fetch-dest'),
       referer: req.headers.get('referer'),
-      'user-agent': req.headers.get('user-agent'),
       cookie: req.headers.get('cookie') ? '<present>' : null,
-      authorization: req.headers.get('authorization') ? '<present>' : null,
     }
     const start = Date.now()
     const res = await handler(req, ctx)
     const ms = Date.now() - start
+
+    // Peek at the body for the endpoints we care about, without consuming it.
+    let bodySnippet = ''
+    if (
+      url.pathname.endsWith('/users/me') ||
+      url.pathname.endsWith('/users/login') ||
+      url.pathname.endsWith('/populate-tenant-options')
+    ) {
+      try {
+        const clone = res.clone()
+        const text = await clone.text()
+        bodySnippet = text.slice(0, 300)
+      } catch {
+        bodySnippet = '<unreadable>'
+      }
+    }
+
     console.log(
       `[payload-debug] ${method} ${url.pathname} → ${res.status} (${ms}ms)`,
       JSON.stringify(headers),
+      bodySnippet ? `body: ${bodySnippet}` : '',
     )
     return res
   }) as T
