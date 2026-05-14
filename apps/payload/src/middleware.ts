@@ -62,6 +62,13 @@ export function middleware(req: NextRequest): NextResponse {
   return NextResponse.next({ request: { headers: forwardedHeaders } })
 }
 
+/**
+ * Match both:
+ *   - /api/*   (REST endpoints — populate-tenant-options, users/login, users/me, …)
+ *   - /admin/* (Next.js server components inside the admin panel also run
+ *     Payload's auth check via extractJWT; without Origin they bounce
+ *     authenticated users straight back to /admin/login.)
+ */
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/api/:path*', '/admin/:path*'],
 }
