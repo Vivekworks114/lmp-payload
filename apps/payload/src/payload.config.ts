@@ -73,7 +73,9 @@ export default buildConfig({
         name: 'tenant',
       },
       tenantsArrayField: {
-        includeDefaultField: false,
+        // Must be true (or add a manual `tenants` field on Users) — the plugin
+        // queries user.tenants when assigning/removing tenant access.
+        includeDefaultField: true,
       },
       userHasAccessToAllTenants: (user) => isSuperAdmin(user),
     }),
