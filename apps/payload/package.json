@@ -20,7 +20,8 @@
     "report:deploy": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/report-tenant-deploy.ts",
     "import:blog-from-repo": "cross-env NODE_OPTIONS=--no-deprecation tsx --env-file=.env scripts/import-blog-from-repo.ts",
     "report:github-setup": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/report-tenant-github-setup.ts",
-    "db:users-tenants": "echo 'Run: psql \"$DATABASE_URI\" -f scripts/create-users-tenants-table.sql'"
+    "db:users-tenants": "echo 'Run: psql \"$DATABASE_URI\" -f scripts/create-users-tenants-table.sql'",
+    "generate:server-actions-key": "node -e \"const c=require('crypto');const k=c.randomBytes(32).toString('base64');console.log('Add to apps/payload/.env (then rm -rf .next && pnpm build):');console.log('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY='+k)\""
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.0.0",

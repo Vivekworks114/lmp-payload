@@ -23,6 +23,20 @@ export interface DispatchResult {
   error?: string
   runId?: number
   runUrl?: string
+  /** True when GitHub rejected extra inputs and a legacy minimal dispatch succeeded. */
+  usedLegacyWorkflowInputs?: boolean
+}
+
+export function isWorkflowUnexpectedInputsError(status: number, error?: string): boolean {
+  return status === 422 && (error?.includes('Unexpected inputs') ?? false)
+}
+
+function pickInputs(inputs: Record<string, string>, keys: string[]): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const key of keys) {
+    if (inputs[key] != null && inputs[key] !== '') out[key] = inputs[key]
+  }
+  return out
 }
 
 export interface WorkflowRunSummary {
@@ -96,6 +110,31 @@ export async function dispatchWorkflow(opts: DispatchOptions): Promise<DispatchR
     runId: run?.id,
     runUrl: run?.html_url,
   }
+}
+
+/**
+ * Dispatch with optional fallback when GitHub's workflow file is older than this app
+ * (422 Unexpected inputs). Pass legacyInputKeys e.g. ['tenant_slug', 'reason'].
+ */
+export async function dispatchWorkflowResilient(
+  opts: DispatchOptions & { legacyInputKeys?: string[] },
+): Promise<DispatchResult> {
+  const result = await dispatchWorkflow(opts)
+  if (result.ok || !opts.legacyInputKeys?.length) return result
+  if (!isWorkflowUnexpectedInputsError(result.status, result.error)) return result
+
+  const legacy = pickInputs(opts.inputs, opts.legacyInputKeys)
+  const retry = await dispatchWorkflow({
+    workflow: opts.workflow,
+    inputs: legacy,
+    ref: opts.ref,
+  })
+
+  if (retry.ok) {
+    return { ...retry, usedLegacyWorkflowInputs: true }
+  }
+
+  return result
 }
 
 /**
