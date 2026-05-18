@@ -70,13 +70,7 @@ export interface Config {
     tenants: Tenant;
     users: User;
     'blog-posts': BlogPost;
-    pages: Page;
-    top10s: Top10;
-    products: Product;
-    businesses: Business;
     media: Media;
-    redirects: Redirect;
-    'nav-menus': NavMenu;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -87,13 +81,7 @@ export interface Config {
     tenants: TenantsSelect<false> | TenantsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     'blog-posts': BlogPostsSelect<false> | BlogPostsSelect<true>;
-    pages: PagesSelect<false> | PagesSelect<true>;
-    top10s: Top10SSelect<false> | Top10SSelect<true>;
-    products: ProductsSelect<false> | ProductsSelect<true>;
-    businesses: BusinessesSelect<false> | BusinessesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
-    redirects: RedirectsSelect<false> | RedirectsSelect<true>;
-    'nav-menus': NavMenusSelect<false> | NavMenusSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -179,12 +167,6 @@ export interface Tenant {
   ga4Id?: string | null;
   gtmId?: string | null;
   plausibleDomain?: string | null;
-  /**
-   * Bol.com Partner Programma publisher ID (s=...).
-   */
-  bolPublisherId?: string | null;
-  awinId?: string | null;
-  amazonTag?: string | null;
   socialLinks?:
     | {
         platform: 'facebook' | 'instagram' | 'twitter' | 'youtube' | 'tiktok' | 'pinterest' | 'linkedin';
@@ -192,6 +174,27 @@ export interface Tenant {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Client site repository: owner/repo or https://github.com/owner/repo. When set, publish deploys from this repo instead of apps/sites/<slug>.
+   */
+  githubRepo?: string | null;
+  /**
+   * Branch to checkout for build and setup.
+   */
+  githubBranch?: string | null;
+  /**
+   * CMS modules synced on publish. Only blog is supported today.
+   */
+  enabledModules?: 'blog'[] | null;
+  /**
+   * Path inside the Astro repo where blog markdown is written on publish.
+   */
+  blogContentPath?: string | null;
+  githubSetupStatus?: ('not_connected' | 'validated' | 'setup_dispatched' | 'ready' | 'failed') | null;
+  /**
+   * Output from the last repository validation.
+   */
+  githubValidationNotes?: string | null;
   /**
    * Wrangler project name (defaults to slug).
    */
@@ -201,9 +204,39 @@ export interface Tenant {
    */
   githubWorkflow?: string | null;
   /**
-   * When unchecked, content changes do NOT trigger a rebuild.
+   * Legacy: auto-deploy on every save via webhook. Leave off — editors use Publish content instead.
    */
   webhookEnabled?: boolean | null;
+  /**
+   * When Publish content was last clicked (CI started).
+   */
+  lastPublishedAt?: string | null;
+  /**
+   * Default *.workers.dev URL after deploy. Set automatically by CI; attach your custom domain in Cloudflare separately.
+   */
+  workersDevUrl?: string | null;
+  /**
+   * Smoke-test URL before DNS cutover (usually the same as workers.dev until a staging worker exists).
+   */
+  previewUrl?: string | null;
+  lastDeployStatus?: ('idle' | 'dispatched' | 'in_progress' | 'success' | 'failure') | null;
+  lastDeployAt?: string | null;
+  /**
+   * Direct link to the latest GitHub Actions deploy run.
+   */
+  lastDeployRunUrl?: string | null;
+  /**
+   * Last deploy failure message (cleared on success).
+   */
+  lastDeployError?: string | null;
+  lastScaffoldStatus?: ('idle' | 'dispatched' | 'in_progress' | 'success' | 'failure') | null;
+  lastScaffoldAt?: string | null;
+  lastScaffoldRunUrl?: string | null;
+  /**
+   * Pull request opened by the scaffold workflow.
+   */
+  lastScaffoldPrUrl?: string | null;
+  lastScaffoldError?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -334,114 +367,16 @@ export interface BlogPost {
     [k: string]: unknown;
   };
   /**
-   * Per-page SEO overrides. Falls back to the tenant defaults when blank.
+   * Optional custom frontmatter fields for this site (merged into markdown on publish). Use when the connected repo expects extra keys.
    */
-  seo?: {
-    title?: string | null;
-    description?: string | null;
-    ogImage?: (number | null) | Media;
-    /**
-     * e.g. noindex,follow
-     */
-    robots?: string | null;
-    /**
-     * Override canonical URL if different from this site.
-     */
-    canonicalUrl?: string | null;
-  };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "pages".
- */
-export interface Page {
-  id: number;
-  tenant?: (number | null) | Tenant;
-  title: string;
-  /**
-   * URL slug. Lowercase, hyphens only.
-   */
-  slug: string;
-  description?: string | null;
-  pubDate?: string | null;
-  updatedDate?: string | null;
-  content?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
+  extra?:
+    | {
         [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * Per-page SEO overrides. Falls back to the tenant defaults when blank.
-   */
-  seo?: {
-    title?: string | null;
-    description?: string | null;
-    ogImage?: (number | null) | Media;
-    /**
-     * e.g. noindex,follow
-     */
-    robots?: string | null;
-    /**
-     * Override canonical URL if different from this site.
-     */
-    canonicalUrl?: string | null;
-  };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "top10s".
- */
-export interface Top10 {
-  id: number;
-  tenant?: (number | null) | Tenant;
-  title: string;
-  /**
-   * URL slug. Lowercase, hyphens only.
-   */
-  slug: string;
-  h1?: string | null;
-  categorySingular?: string | null;
-  categoryPlural?: string | null;
-  intro?: string | null;
-  conclusion?: string | null;
-  metaDescription?: string | null;
-  ogDescription?: string | null;
-  /**
-   * Human-readable, e.g. "2 jan. 2026".
-   */
-  publishedAt?: string | null;
-  lastUpdated?: string | null;
-  products?:
-    | {
-        rank: number;
-        name: string;
-        imageUrl?: string | null;
-        description?: string | null;
-        affiliateUrl?: string | null;
-        affiliateNetwork?: ('bol' | 'awin' | 'amazon' | 'other') | null;
-        id?: string | null;
-      }[]
-    | null;
-  faq?:
-    | {
-        question: string;
-        answerHtml: string;
-        id?: string | null;
-      }[]
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
     | null;
   /**
    * Per-page SEO overrides. Falls back to the tenant defaults when blank.
@@ -459,163 +394,6 @@ export interface Top10 {
      */
     canonicalUrl?: string | null;
   };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "products".
- */
-export interface Product {
-  id: number;
-  tenant?: (number | null) | Tenant;
-  name: string;
-  title?: string | null;
-  /**
-   * URL slug. Lowercase, hyphens only.
-   */
-  slug: string;
-  category?: string | null;
-  intro?: string | null;
-  description?: string | null;
-  rating?: number | null;
-  ratingOutOf?: number | null;
-  imageUrl?: string | null;
-  image?: (number | null) | Media;
-  affiliateUrl?: string | null;
-  affiliateNetwork?: ('bol' | 'awin' | 'amazon' | 'other') | null;
-  affiliateCta?: string | null;
-  specs?:
-    | {
-        label: string;
-        value: string;
-        id?: string | null;
-      }[]
-    | null;
-  pros?:
-    | {
-        value: string;
-        id?: string | null;
-      }[]
-    | null;
-  cons?:
-    | {
-        value: string;
-        id?: string | null;
-      }[]
-    | null;
-  metaDescription?: string | null;
-  ogDescription?: string | null;
-  publishedAt?: string | null;
-  lastUpdated?: string | null;
-  /**
-   * Per-page SEO overrides. Falls back to the tenant defaults when blank.
-   */
-  seo?: {
-    title?: string | null;
-    description?: string | null;
-    ogImage?: (number | null) | Media;
-    /**
-     * e.g. noindex,follow
-     */
-    robots?: string | null;
-    /**
-     * Override canonical URL if different from this site.
-     */
-    canonicalUrl?: string | null;
-  };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "businesses".
- */
-export interface Business {
-  id: number;
-  tenant?: (number | null) | Tenant;
-  name: string;
-  title?: string | null;
-  /**
-   * URL slug. Lowercase, hyphens only.
-   */
-  slug: string;
-  city?: string | null;
-  address?: string | null;
-  websiteUrl?: string | null;
-  googleMapsUrl?: string | null;
-  intro?: string | null;
-  metaDescription?: string | null;
-  ogDescription?: string | null;
-  publishedAt?: string | null;
-  lastUpdated?: string | null;
-  /**
-   * Per-page SEO overrides. Falls back to the tenant defaults when blank.
-   */
-  seo?: {
-    title?: string | null;
-    description?: string | null;
-    ogImage?: (number | null) | Media;
-    /**
-     * e.g. noindex,follow
-     */
-    robots?: string | null;
-    /**
-     * Override canonical URL if different from this site.
-     */
-    canonicalUrl?: string | null;
-  };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "redirects".
- */
-export interface Redirect {
-  id: number;
-  tenant?: (number | null) | Tenant;
-  /**
-   * Source path, e.g. /old-page/
-   */
-  from: string;
-  /**
-   * Destination path or full URL.
-   */
-  to: string;
-  status: '301' | '302' | '307' | '308';
-  /**
-   * Optional. Why this redirect exists.
-   */
-  note?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "nav-menus".
- */
-export interface NavMenu {
-  id: number;
-  tenant?: (number | null) | Tenant;
-  name: string;
-  location: 'header' | 'footer' | 'mobile';
-  items?:
-    | {
-        label: string;
-        href: string;
-        rel?: string | null;
-        children?:
-          | {
-              label: string;
-              href: string;
-              rel?: string | null;
-              id?: string | null;
-            }[]
-          | null;
-        id?: string | null;
-      }[]
-    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -656,32 +434,8 @@ export interface PayloadLockedDocument {
         value: number | BlogPost;
       } | null)
     | ({
-        relationTo: 'pages';
-        value: number | Page;
-      } | null)
-    | ({
-        relationTo: 'top10s';
-        value: number | Top10;
-      } | null)
-    | ({
-        relationTo: 'products';
-        value: number | Product;
-      } | null)
-    | ({
-        relationTo: 'businesses';
-        value: number | Business;
-      } | null)
-    | ({
         relationTo: 'media';
         value: number | Media;
-      } | null)
-    | ({
-        relationTo: 'redirects';
-        value: number | Redirect;
-      } | null)
-    | ({
-        relationTo: 'nav-menus';
-        value: number | NavMenu;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -757,9 +511,6 @@ export interface TenantsSelect<T extends boolean = true> {
   ga4Id?: T;
   gtmId?: T;
   plausibleDomain?: T;
-  bolPublisherId?: T;
-  awinId?: T;
-  amazonTag?: T;
   socialLinks?:
     | T
     | {
@@ -767,9 +518,27 @@ export interface TenantsSelect<T extends boolean = true> {
         url?: T;
         id?: T;
       };
+  githubRepo?: T;
+  githubBranch?: T;
+  enabledModules?: T;
+  blogContentPath?: T;
+  githubSetupStatus?: T;
+  githubValidationNotes?: T;
   cloudflareProject?: T;
   githubWorkflow?: T;
   webhookEnabled?: T;
+  lastPublishedAt?: T;
+  workersDevUrl?: T;
+  previewUrl?: T;
+  lastDeployStatus?: T;
+  lastDeployAt?: T;
+  lastDeployRunUrl?: T;
+  lastDeployError?: T;
+  lastScaffoldStatus?: T;
+  lastScaffoldAt?: T;
+  lastScaffoldRunUrl?: T;
+  lastScaffoldPrUrl?: T;
+  lastScaffoldError?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -823,161 +592,7 @@ export interface BlogPostsSelect<T extends boolean = true> {
         id?: T;
       };
   content?: T;
-  seo?:
-    | T
-    | {
-        title?: T;
-        description?: T;
-        ogImage?: T;
-        robots?: T;
-        canonicalUrl?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "pages_select".
- */
-export interface PagesSelect<T extends boolean = true> {
-  tenant?: T;
-  title?: T;
-  slug?: T;
-  description?: T;
-  pubDate?: T;
-  updatedDate?: T;
-  content?: T;
-  seo?:
-    | T
-    | {
-        title?: T;
-        description?: T;
-        ogImage?: T;
-        robots?: T;
-        canonicalUrl?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "top10s_select".
- */
-export interface Top10SSelect<T extends boolean = true> {
-  tenant?: T;
-  title?: T;
-  slug?: T;
-  h1?: T;
-  categorySingular?: T;
-  categoryPlural?: T;
-  intro?: T;
-  conclusion?: T;
-  metaDescription?: T;
-  ogDescription?: T;
-  publishedAt?: T;
-  lastUpdated?: T;
-  products?:
-    | T
-    | {
-        rank?: T;
-        name?: T;
-        imageUrl?: T;
-        description?: T;
-        affiliateUrl?: T;
-        affiliateNetwork?: T;
-        id?: T;
-      };
-  faq?:
-    | T
-    | {
-        question?: T;
-        answerHtml?: T;
-        id?: T;
-      };
-  seo?:
-    | T
-    | {
-        title?: T;
-        description?: T;
-        ogImage?: T;
-        robots?: T;
-        canonicalUrl?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "products_select".
- */
-export interface ProductsSelect<T extends boolean = true> {
-  tenant?: T;
-  name?: T;
-  title?: T;
-  slug?: T;
-  category?: T;
-  intro?: T;
-  description?: T;
-  rating?: T;
-  ratingOutOf?: T;
-  imageUrl?: T;
-  image?: T;
-  affiliateUrl?: T;
-  affiliateNetwork?: T;
-  affiliateCta?: T;
-  specs?:
-    | T
-    | {
-        label?: T;
-        value?: T;
-        id?: T;
-      };
-  pros?:
-    | T
-    | {
-        value?: T;
-        id?: T;
-      };
-  cons?:
-    | T
-    | {
-        value?: T;
-        id?: T;
-      };
-  metaDescription?: T;
-  ogDescription?: T;
-  publishedAt?: T;
-  lastUpdated?: T;
-  seo?:
-    | T
-    | {
-        title?: T;
-        description?: T;
-        ogImage?: T;
-        robots?: T;
-        canonicalUrl?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "businesses_select".
- */
-export interface BusinessesSelect<T extends boolean = true> {
-  tenant?: T;
-  name?: T;
-  title?: T;
-  slug?: T;
-  city?: T;
-  address?: T;
-  websiteUrl?: T;
-  googleMapsUrl?: T;
-  intro?: T;
-  metaDescription?: T;
-  ogDescription?: T;
-  publishedAt?: T;
-  lastUpdated?: T;
+  extra?: T;
   seo?:
     | T
     | {
@@ -1053,46 +668,6 @@ export interface MediaSelect<T extends boolean = true> {
               filename?: T;
             };
       };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "redirects_select".
- */
-export interface RedirectsSelect<T extends boolean = true> {
-  tenant?: T;
-  from?: T;
-  to?: T;
-  status?: T;
-  note?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "nav-menus_select".
- */
-export interface NavMenusSelect<T extends boolean = true> {
-  tenant?: T;
-  name?: T;
-  location?: T;
-  items?:
-    | T
-    | {
-        label?: T;
-        href?: T;
-        rel?: T;
-        children?:
-          | T
-          | {
-              label?: T;
-              href?: T;
-              rel?: T;
-              id?: T;
-            };
-        id?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
