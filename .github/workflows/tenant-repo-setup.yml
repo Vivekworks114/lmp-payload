@@ -38,7 +38,7 @@ jobs:
         with:
           repository: ${{ env.GITHUB_REPO }}
           ref: ${{ env.GITHUB_BRANCH }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.EXTERNAL_REPO_GITHUB_TOKEN || github.token }}
           path: site
 
       - name: Apply integration files

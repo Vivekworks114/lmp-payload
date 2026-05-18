@@ -64,7 +64,10 @@ jobs:
         with:
           repository: ${{ env.GITHUB_REPO }}
           ref: ${{ env.GITHUB_BRANCH }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Default github.token cannot read other users' private repos. Add a PAT as
+          # EXTERNAL_REPO_GITHUB_TOKEN (repo secret on astropayload) with read access
+          # to client repos — same token as Payload GITHUB_TOKEN is fine if scoped.
+          token: ${{ secrets.EXTERNAL_REPO_GITHUB_TOKEN || github.token }}
           path: site
 
       - name: Setup pnpm (platform)

@@ -140,10 +140,11 @@ In the repo settings → **Secrets and variables → Actions**, add:
 | `PAYLOAD_API_KEY` | A dedicated CI user's API key (super-admin; don't reuse your personal one) |
 | `DEPLOY_REPORT_TOKEN` | Optional. Shared secret for `POST /api/tenants/report-deploy` if you prefer not to use the API key in CI |
 | `CLOUDFLARE_WORKERS_DEV_SUBDOMAIN` | Optional. Account workers.dev subdomain used to build `https://<slug>.<subdomain>.workers.dev` when wrangler output cannot be parsed |
+| `EXTERNAL_REPO_GITHUB_TOKEN` | **Required for external client repos.** Fine-grained or classic PAT with **read** access to each client repo (e.g. `zbseollp/keukenfaqs`). The built-in `GITHUB_TOKEN` only sees the astropayload repo — checkout of other repos fails with "Repository not found". Can be the same PAT as Payload `GITHUB_TOKEN` if scoped to those repos. |
 
 These get injected into `tenant-deploy.yml`, `tenant-scaffold.yml`, and `tenant-repo-setup.yml` at runtime.
 
-**External client repos** (tenant has `githubRepo` set): `GITHUB_TOKEN` must be able to **read** the client repo and open setup PRs. After the setup PR merges, either the platform workflow polls for merge (30 min) or the client repo workflow notifies Payload — add on the **client** repo:
+**External client repos** (tenant has `githubRepo` set): the PAT above must be able to **read** the client repo and open setup PRs. After the setup PR merges, either the platform workflow polls for merge (30 min) or the client repo workflow notifies Payload — add on the **client** repo:
 
 | Secret | Value |
 |---|---|
