@@ -1,6 +1,6 @@
+import { TenantGitHubConnect as TenantGitHubConnect_4e53abc39a1699a16ca96e8ab4813d15 } from '../../../components/TenantGitHubConnect.client'
 import { TenantActions as TenantActions_11e62c402fc7bb30e1cbbfe6d2f91e08 } from '../../../components/TenantActions.client'
 import { TenantDeployLinks as TenantDeployLinks_06e50379fa3f9a64b68c363de1e1e4b6 } from '../../../components/TenantDeployLinks.client'
-import { TenantGitHubConnect as TenantGitHubConnect_4e53abc39a1699a16ca96e8ab4813d15 } from '../../../components/TenantGitHubConnect.client'
 import { WatchTenantCollection as WatchTenantCollection_1d0591e3cf4f332c83a86da13a0de59a } from '@payloadcms/plugin-multi-tenant/client'
 import { TenantField as TenantField_1d0591e3cf4f332c83a86da13a0de59a } from '@payloadcms/plugin-multi-tenant/client'
 import { RscEntryLexicalCell as RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
@@ -34,9 +34,9 @@ import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } f
 
 /** @type import('payload').ImportMap */
 export const importMap = {
+  "/components/TenantGitHubConnect.client#TenantGitHubConnect": TenantGitHubConnect_4e53abc39a1699a16ca96e8ab4813d15,
   "/components/TenantActions.client#TenantActions": TenantActions_11e62c402fc7bb30e1cbbfe6d2f91e08,
   "/components/TenantDeployLinks.client#TenantDeployLinks": TenantDeployLinks_06e50379fa3f9a64b68c363de1e1e4b6,
-  "/components/TenantGitHubConnect.client#TenantGitHubConnect": TenantGitHubConnect_4e53abc39a1699a16ca96e8ab4813d15,
   "@payloadcms/plugin-multi-tenant/client#WatchTenantCollection": WatchTenantCollection_1d0591e3cf4f332c83a86da13a0de59a,
   "@payloadcms/plugin-multi-tenant/client#TenantField": TenantField_1d0591e3cf4f332c83a86da13a0de59a,
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,

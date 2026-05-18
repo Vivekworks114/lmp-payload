@@ -40,24 +40,48 @@ const ALLOWED_ORIGINS: ReadonlySet<string> = (() => {
   return set
 })()
 
+function allowedOriginsFor(req: NextRequest): Set<string> {
+  const set = new Set(ALLOWED_ORIGINS)
+  const host = req.headers.get('host')
+  if (host) {
+    const proto = req.nextUrl.protocol.replace(':', '')
+    set.add(`${proto}://${host}`)
+  }
+  return set
+}
+
 export function middleware(req: NextRequest): NextResponse {
-  if (req.headers.get('origin')) return NextResponse.next()
+  const allowed = allowedOriginsFor(req)
+
+  const origin = req.headers.get('origin')
+  if (origin && allowed.has(origin)) return NextResponse.next()
+
+  let synthOrigin: string | null = null
 
   const referer = req.headers.get('referer')
-  if (!referer) return NextResponse.next()
-
-  let refOrigin: string
-  try {
-    const url = new URL(referer)
-    refOrigin = `${url.protocol}//${url.host}`
-  } catch {
-    return NextResponse.next()
+  if (referer) {
+    try {
+      const url = new URL(referer)
+      const refOrigin = `${url.protocol}//${url.host}`
+      if (allowed.has(refOrigin)) synthOrigin = refOrigin
+    } catch {
+      // ignore invalid referer
+    }
   }
 
-  if (!ALLOWED_ORIGINS.has(refOrigin)) return NextResponse.next()
+  if (!synthOrigin) {
+    const host = req.headers.get('host')
+    if (host) {
+      const proto = req.nextUrl.protocol.replace(':', '')
+      const hostOrigin = `${proto}://${host}`
+      if (allowed.has(hostOrigin)) synthOrigin = hostOrigin
+    }
+  }
+
+  if (!synthOrigin) return NextResponse.next()
 
   const forwardedHeaders = new Headers(req.headers)
-  forwardedHeaders.set('origin', refOrigin)
+  forwardedHeaders.set('origin', synthOrigin)
 
   return NextResponse.next({ request: { headers: forwardedHeaders } })
 }

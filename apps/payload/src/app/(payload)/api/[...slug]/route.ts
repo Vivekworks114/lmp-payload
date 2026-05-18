@@ -10,7 +10,8 @@ import {
 
 // TEMPORARY DEBUG WRAPPER — log exactly what Payload sees for every /api request,
 // then mirror the response status. Remove once we've diagnosed the 401.
-const DEBUG = process.env.PAYLOAD_DEBUG_AUTH === '1'
+const DEBUG =
+  process.env.PAYLOAD_DEBUG_AUTH === '1' || process.env.NODE_ENV !== 'production'
 
 function debugWrap<T extends (...args: any[]) => Promise<Response> | Response>(
   method: string,
@@ -29,17 +30,19 @@ function debugWrap<T extends (...args: any[]) => Promise<Response> | Response>(
     const res = await handler(req, ctx)
     const ms = Date.now() - start
 
-    // Peek at the body for the endpoints we care about, without consuming it.
     let bodySnippet = ''
-    if (
-      url.pathname.endsWith('/users/me') ||
-      url.pathname.endsWith('/users/login') ||
+    const shouldLogBody =
+      res.status >= 400 ||
+      method === 'DELETE' ||
+      method === 'PATCH' ||
+      url.pathname.includes('/users') ||
       url.pathname.endsWith('/populate-tenant-options')
-    ) {
+
+    if (shouldLogBody) {
       try {
         const clone = res.clone()
         const text = await clone.text()
-        bodySnippet = text.slice(0, 300)
+        bodySnippet = text.slice(0, 500)
       } catch {
         bodySnippet = '<unreadable>'
       }

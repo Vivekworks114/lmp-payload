@@ -26,12 +26,37 @@ export const Tenants: CollectionConfig = {
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'domain', 'lastDeployStatus', 'lastDeployAt'],
     group: 'Platform',
+    description:
+      'Platform sites (domains, branding, deploy). Only Super Admins can create or edit tenants.',
+    hidden: ({ user }) => !isSuperAdmin(user),
   },
   access: {
+    // Public read for Astro builds via API key / unauthenticated REST.
     read: publicRead,
     create: ({ req }) => isSuperAdmin(req.user),
     update: ({ req }) => isSuperAdmin(req.user),
     delete: ({ req }) => isSuperAdmin(req.user),
+  },
+  hooks: {
+    beforeValidate: [
+      ({ data, operation }) => {
+        if (operation !== 'create' || !data || typeof data !== 'object') return data
+        const row = data as Record<string, unknown>
+        const name = typeof row.name === 'string' ? row.name.trim() : ''
+        const slug = typeof row.slug === 'string' ? row.slug.trim() : ''
+        if (!slug && name) {
+          let generated = name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+          if (generated && !/^[a-z]/.test(generated)) generated = `t-${generated}`
+          if (generated) row.slug = generated
+        }
+        if (!row.siteTitle && name) row.siteTitle = name
+        if (!row.siteDescription && name) row.siteDescription = name
+        return row
+      },
+    ],
   },
   endpoints: [
     scaffoldEndpoint,
@@ -45,24 +70,6 @@ export const Tenants: CollectionConfig = {
     reportGithubSetupEndpoint,
   ],
   fields: [
-    {
-      name: 'actions',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '/components/TenantActions.client#TenantActions',
-        },
-      },
-    },
-    {
-      name: 'deployLinks',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '/components/TenantDeployLinks.client#TenantDeployLinks',
-        },
-      },
-    },
     {
       name: 'name',
       type: 'text',
@@ -404,6 +411,24 @@ export const Tenants: CollectionConfig = {
           ],
         },
       ],
+    },
+    {
+      name: 'actions',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '/components/TenantActions.client#TenantActions',
+        },
+      },
+    },
+    {
+      name: 'deployLinks',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '/components/TenantDeployLinks.client#TenantDeployLinks',
+        },
+      },
     },
   ],
 }

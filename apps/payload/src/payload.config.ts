@@ -77,6 +77,13 @@ export default buildConfig({
         // queries user.tenants when assigning/removing tenant access.
         includeDefaultField: true,
       },
+      // Tenants collection uses explicit super-admin access in Tenants.ts.
+      // The plugin default adds `id in user.tenants`, which blocks creating new
+      // tenants (no id yet) and locks the form after a failed save.
+      useTenantsCollectionAccess: false,
+      // Do not scope the Tenants list to the navbar tenant switcher — super-admins
+      // manage all sites; filtering hides rows and confuses create/edit.
+      useTenantsListFilter: false,
       userHasAccessToAllTenants: (user) => isSuperAdmin(user),
     }),
 

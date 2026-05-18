@@ -59,11 +59,16 @@ export const Users: CollectionConfig = {
       hasMany: true,
       required: true,
       defaultValue: ['editor'],
+      saveToJWT: true,
       options: [
         { label: 'Super Admin', value: 'super-admin' },
         { label: 'Tenant Admin', value: 'tenant-admin' },
         { label: 'Editor', value: 'editor' },
       ],
+      admin: {
+        description:
+          'Super Admin — create/edit tenants and all sites. Tenant Admin / Editor — assigned sites only (blog & media).',
+      },
       access: {
         update: ({ req }) => isSuperAdmin(req.user),
       },

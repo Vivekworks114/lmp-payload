@@ -122,6 +122,8 @@ export interface UserAuthOperations {
   };
 }
 /**
+ * Platform sites (domains, branding, deploy). Only Super Admins can create or edit tenants.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "tenants".
  */
@@ -302,7 +304,16 @@ export interface Media {
 export interface User {
   id: number;
   name?: string | null;
+  /**
+   * Super Admin — create/edit tenants and all sites. Tenant Admin / Editor — assigned sites only (blog & media).
+   */
   roles: ('super-admin' | 'tenant-admin' | 'editor')[];
+  tenants?:
+    | {
+        tenant: number | Tenant;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -549,6 +560,12 @@ export interface TenantsSelect<T extends boolean = true> {
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
+  tenants?:
+    | T
+    | {
+        tenant?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;

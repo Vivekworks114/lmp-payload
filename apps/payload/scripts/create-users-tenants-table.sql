@@ -5,12 +5,17 @@
 --
 --   psql "$DATABASE_URI" -f apps/payload/scripts/create-users-tenants-table.sql
 
+-- Payload array rows use varchar ids (same pattern as users_roles, etc.)
 CREATE TABLE IF NOT EXISTS "users_tenants" (
   "_order" integer NOT NULL,
   "_parent_id" integer NOT NULL,
   "id" varchar PRIMARY KEY NOT NULL,
   "tenant_id" integer NOT NULL
 );
+
+-- Verify after running:
+--   SELECT COUNT(*) FROM users_tenants;
+--   \d users_tenants
 
 DO $$
 BEGIN

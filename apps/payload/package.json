@@ -19,7 +19,8 @@
     "migrate:wxr": "cross-env NODE_OPTIONS=--no-deprecation tsx --env-file=.env scripts/migrate-wxr.ts",
     "report:deploy": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/report-tenant-deploy.ts",
     "import:blog-from-repo": "cross-env NODE_OPTIONS=--no-deprecation tsx --env-file=.env scripts/import-blog-from-repo.ts",
-    "report:github-setup": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/report-tenant-github-setup.ts"
+    "report:github-setup": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/report-tenant-github-setup.ts",
+    "db:users-tenants": "echo 'Run: psql \"$DATABASE_URI\" -f scripts/create-users-tenants-table.sql'"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.0.0",
