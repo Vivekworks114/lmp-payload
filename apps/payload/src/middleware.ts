@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 
 import type { NextRequest } from 'next/server'
 
+import { isPayloadApiDebug, payloadLog } from './lib/payloadLogger'
+
 /**
  * Recover Payload cookie-based auth when the browser (or something between it
  * and us) strips `Origin` and `Sec-Fetch-Site` from outbound fetches.
@@ -53,7 +55,22 @@ function allowedOriginsFor(req: NextRequest): Set<string> {
 export function middleware(req: NextRequest): NextResponse {
   const allowed = allowedOriginsFor(req)
 
+  const isMutatingApi =
+    req.nextUrl.pathname.startsWith('/api/') &&
+    req.method !== 'GET' &&
+    req.method !== 'HEAD' &&
+    req.method !== 'OPTIONS'
+
   const origin = req.headers.get('origin')
+  if (origin && !allowed.has(origin) && isMutatingApi && isPayloadApiDebug()) {
+    payloadLog.warn('middleware.origin_rejected', {
+      path: req.nextUrl.pathname,
+      method: req.method,
+      origin,
+      allowed: [...allowed],
+    })
+  }
+
   if (origin && allowed.has(origin)) return NextResponse.next()
 
   let synthOrigin: string | null = null
@@ -78,7 +95,25 @@ export function middleware(req: NextRequest): NextResponse {
     }
   }
 
-  if (!synthOrigin) return NextResponse.next()
+  if (!synthOrigin) {
+    if (isMutatingApi && isPayloadApiDebug() && !origin) {
+      payloadLog.warn('middleware.no_origin', {
+        path: req.nextUrl.pathname,
+        method: req.method,
+        host: req.headers.get('host'),
+        referer: req.headers.get('referer'),
+      })
+    }
+    return NextResponse.next()
+  }
+
+  if (isMutatingApi && isPayloadApiDebug()) {
+    payloadLog.info('middleware.origin_synthesized', {
+      path: req.nextUrl.pathname,
+      method: req.method,
+      synthOrigin,
+    })
+  }
 
   const forwardedHeaders = new Headers(req.headers)
   forwardedHeaders.set('origin', synthOrigin)

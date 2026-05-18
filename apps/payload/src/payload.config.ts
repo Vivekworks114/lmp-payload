@@ -84,6 +84,9 @@ export default buildConfig({
       // Do not scope the Tenants list to the navbar tenant switcher — super-admins
       // manage all sites; filtering hides rows and confuses create/edit.
       useTenantsListFilter: false,
+      // Custom cleanup in Tenants.ts (logged, timeout-bounded). Plugin cleanup can
+      // hang DELETE when many blog posts exist or users_tenants queries fail.
+      cleanupAfterTenantDelete: false,
       userHasAccessToAllTenants: (user) => isSuperAdmin(user),
     }),
 

@@ -8,52 +8,71 @@ import {
   REST_PUT,
 } from '@payloadcms/next/routes'
 
-// TEMPORARY DEBUG WRAPPER — log exactly what Payload sees for every /api request,
-// then mirror the response status. Remove once we've diagnosed the 401.
-const DEBUG =
-  process.env.PAYLOAD_DEBUG_AUTH === '1' || process.env.NODE_ENV !== 'production'
+import { isPayloadApiDebug, payloadLog } from '../../../../lib/payloadLogger'
+
+const MUTATING = new Set(['POST', 'PATCH', 'PUT', 'DELETE'])
 
 function debugWrap<T extends (...args: any[]) => Promise<Response> | Response>(
   method: string,
   handler: T,
 ): T {
-  if (!DEBUG) return handler
+  if (!isPayloadApiDebug()) return handler
+
   return (async (req: Request, ctx: any) => {
     const url = new URL(req.url)
-    const headers: Record<string, string | null> = {
+    const path = url.pathname
+    const isTenant = path.startsWith('/api/tenants')
+    const shouldLog = MUTATING.has(method) || isTenant || path.includes('/users')
+
+    if (!shouldLog) return handler(req, ctx)
+
+    const headers = {
       origin: req.headers.get('origin'),
-      'sec-fetch-site': req.headers.get('sec-fetch-site'),
+      host: req.headers.get('host'),
       referer: req.headers.get('referer'),
-      cookie: req.headers.get('cookie') ? '<present>' : null,
+      cookie: req.headers.get('cookie') ? 'present' : 'missing',
+      'content-type': req.headers.get('content-type'),
+      'content-length': req.headers.get('content-length'),
     }
+
+    payloadLog.info('api.request', { method, path, ...headers })
+
     const start = Date.now()
-    const res = await handler(req, ctx)
-    const ms = Date.now() - start
+    try {
+      const res = await handler(req, ctx)
+      const ms = Date.now() - start
 
-    let bodySnippet = ''
-    const shouldLogBody =
-      res.status >= 400 ||
-      method === 'DELETE' ||
-      method === 'PATCH' ||
-      url.pathname.includes('/users') ||
-      url.pathname.endsWith('/populate-tenant-options')
+      let bodySnippet = ''
+      const logBody =
+        res.status >= 400 ||
+        MUTATING.has(method) ||
+        (isTenant && method === 'GET')
 
-    if (shouldLogBody) {
-      try {
-        const clone = res.clone()
-        const text = await clone.text()
-        bodySnippet = text.slice(0, 500)
-      } catch {
-        bodySnippet = '<unreadable>'
+      if (logBody) {
+        try {
+          bodySnippet = (await res.clone().text()).slice(0, 800)
+        } catch {
+          bodySnippet = '<unreadable>'
+        }
       }
-    }
 
-    console.log(
-      `[payload-debug] ${method} ${url.pathname} → ${res.status} (${ms}ms)`,
-      JSON.stringify(headers),
-      bodySnippet ? `body: ${bodySnippet}` : '',
-    )
-    return res
+      if (res.status >= 400) {
+        payloadLog.error('api.response', { method, path, status: res.status, ms, body: bodySnippet })
+      } else {
+        payloadLog.info('api.response', {
+          method,
+          path,
+          status: res.status,
+          ms,
+          ...(bodySnippet ? { body: bodySnippet } : {}),
+        })
+      }
+
+      return res
+    } catch (err) {
+      payloadLog.error('api.exception', { method, path, ms: Date.now() - start }, err)
+      throw err
+    }
   }) as T
 }
 

@@ -13,6 +13,8 @@ import {
   validateGithubEndpoint,
 } from '../endpoints/tenantGithub'
 import { deployEndpoint, publishEndpoint, scaffoldEndpoint } from '../endpoints/tenantActions'
+import { payloadLog } from '../lib/payloadLogger'
+import { tenantAfterDeleteHook, tenantBeforeDeleteHook } from '../lib/tenantDeleteCleanup'
 import { DEPLOY_STATUSES, SCAFFOLD_STATUSES } from '../lib/tenantDeployStatus'
 
 /**
@@ -38,6 +40,29 @@ export const Tenants: CollectionConfig = {
     delete: ({ req }) => isSuperAdmin(req.user),
   },
   hooks: {
+    beforeChange: [
+      ({ data, operation, req }) => {
+        payloadLog.tenant('save.start', {
+          operation,
+          slug: (data as { slug?: string })?.slug,
+          userId: req.user?.id ?? null,
+        })
+        return data
+      },
+    ],
+    afterChange: [
+      ({ doc, operation, req }) => {
+        payloadLog.tenant('save.done', {
+          operation,
+          tenantId: doc.id,
+          slug: doc.slug,
+          userId: req.user?.id ?? null,
+        })
+        return doc
+      },
+    ],
+    beforeDelete: [tenantBeforeDeleteHook],
+    afterDelete: [tenantAfterDeleteHook],
     beforeValidate: [
       ({ data, operation }) => {
         if (operation !== 'create' || !data || typeof data !== 'object') return data
