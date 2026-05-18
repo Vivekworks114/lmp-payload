@@ -1,8 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { authenticatedRead, publicRead } from '../access/tenantAccess'
-import { afterChangeNotify, afterDeleteNotify } from '../hooks/notifyWebhook'
-import { seoFields, slugField } from './_shared'
+import { contentPublishComponents, seoFields, slugField } from './_shared'
 
 /**
  * Mirrors keukenfaqs-main src/content.config.ts `blog` schema so the sync
@@ -15,16 +14,13 @@ export const BlogPosts: CollectionConfig = {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'pubDate', 'updatedAt'],
     group: 'Content',
+    components: contentPublishComponents,
   },
   access: {
     read: publicRead,
     create: authenticatedRead,
     update: authenticatedRead,
     delete: authenticatedRead,
-  },
-  hooks: {
-    afterChange: [afterChangeNotify],
-    afterDelete: [afterDeleteNotify],
   },
   fields: [
     { name: 'title', type: 'text', required: true },
@@ -48,6 +44,14 @@ export const BlogPosts: CollectionConfig = {
       name: 'content',
       type: 'richText',
       required: true,
+    },
+    {
+      name: 'extra',
+      type: 'json',
+      admin: {
+        description:
+          'Optional custom frontmatter fields for this site (merged into markdown on publish). Use when the connected repo expects extra keys.',
+      },
     },
     seoFields(),
   ],

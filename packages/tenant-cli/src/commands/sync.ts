@@ -27,12 +27,14 @@ export async function runSync(args: ParsedArgs): Promise<void> {
   const clean = !boolFlag(args, 'no-clean')
 
   console.log(`[tenant-cli sync] tenant=${slug}, payload=${url}, site=${siteRoot}`)
+  const blogPath = optionalFlag(args, 'blog-path')
   const counts = await syncTenantContent({
     url,
     apiKey,
     tenantSlug: slug,
     siteRoot,
     clean,
+    blogContentPath: blogPath,
   })
   console.log('[tenant-cli sync] done:', counts)
 }

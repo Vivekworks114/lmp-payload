@@ -1,27 +1,23 @@
 import type { Endpoint, PayloadRequest } from 'payload'
 
+import { canPublishTenantRequest } from '../access/canPublishTenant'
 import { isSuperAdmin } from '../access/isSuperAdmin'
+import { dispatchTenantDeploy } from '../lib/dispatchTenantDeploy'
 import { dispatchWorkflow, workflowRunsUrl } from '../lib/githubDispatch'
 
 /**
- * Two REST endpoints attached to the `tenants` collection:
- *
- *   POST /api/tenants/:id/scaffold
- *     Dispatches .github/workflows/tenant-scaffold.yml — generates
- *     apps/sites/<slug>/ and opens a PR for review.
- *
- *   POST /api/tenants/:id/deploy
- *     Dispatches .github/workflows/tenant-deploy.yml — pulls latest content,
- *     builds, and deploys this tenant's Cloudflare Worker.
- *
- * Both require a super-admin user. They are invoked from the custom admin
- * buttons in TenantActions.client.tsx.
+ *   POST /api/tenants/:id/scaffold  — super-admin, opens scaffold PR
+ *   POST /api/tenants/:id/deploy    — super-admin, redeploy (code + content)
+ *   POST /api/tenants/:id/publish   — editors + super-admin, push CMS → live site
  */
 
 type JsonResponse = {
   ok: boolean
   message: string
   runsUrl?: string | null
+  runUrl?: string | null
+  deployMode?: 'monorepo' | 'external'
+  deployTarget?: string
 }
 
 function json(body: JsonResponse, status = 200): Response {
@@ -38,14 +34,63 @@ async function loadTenant(req: PayloadRequest, id: string) {
     name?: string
     domain?: string
     githubWorkflow?: string
+    githubRepo?: string | null
+    githubBranch?: string | null
+    blogContentPath?: string | null
+    enabledModules?: string[] | null
   } | null>
 }
 
 function extractId(req: PayloadRequest): string | null {
-  // Payload v3 exposes route params under `routeParams`.
   const params = (req as unknown as { routeParams?: Record<string, unknown> }).routeParams
   const id = params?.id
   return typeof id === 'string' || typeof id === 'number' ? String(id) : null
+}
+
+async function markScaffoldDispatched(
+  req: PayloadRequest,
+  tenantId: string | number,
+  runUrl: string | null | undefined,
+): Promise<void> {
+  await req.payload.update({
+    collection: 'tenants',
+    id: tenantId,
+    data: {
+      lastScaffoldStatus: 'dispatched',
+      lastScaffoldRunUrl: runUrl ?? undefined,
+      lastScaffoldError: null,
+    } as never,
+    overrideAccess: true,
+  })
+}
+
+export const publishEndpoint: Endpoint = {
+  path: '/:id/publish',
+  method: 'post',
+  handler: async (req) => {
+    const id = extractId(req)
+    if (!id) return json({ ok: false, message: 'Missing tenant id.' }, 400)
+    if (!req.user) return json({ ok: false, message: 'You must be logged in to publish.' }, 401)
+    if (!canPublishTenantRequest(req, id)) {
+      return json({ ok: false, message: 'You do not have permission to publish this site.' }, 403)
+    }
+
+    const tenant = await loadTenant(req, id)
+    if (!tenant) return json({ ok: false, message: 'Tenant not found.' }, 404)
+
+    const result = await dispatchTenantDeploy(req, tenant, 'publish content from admin')
+    return json(
+      {
+        ok: result.ok,
+        message: result.message,
+        runsUrl: result.runsUrl,
+        runUrl: result.runUrl,
+        deployMode: result.deployMode,
+        deployTarget: result.deployTarget,
+      },
+      result.status,
+    )
+  },
 }
 
 export const scaffoldEndpoint: Endpoint = {
@@ -75,14 +120,21 @@ export const scaffoldEndpoint: Endpoint = {
         tenant_name: tenant.name,
       },
     })
-    const runsUrl = workflowRunsUrl('tenant-scaffold.yml')
+    const runsUrl = result.runUrl ?? workflowRunsUrl('tenant-scaffold.yml')
     if (!result.ok) {
-      return json({ ok: false, message: result.error ?? 'GitHub dispatch failed.', runsUrl }, result.status)
+      return json(
+        { ok: false, message: result.error ?? 'GitHub dispatch failed.', runsUrl, runUrl: result.runUrl },
+        result.status,
+      )
     }
+
+    await markScaffoldDispatched(req, tenant.id, result.runUrl)
+
     return json({
       ok: true,
       message: `Scaffold dispatched for "${tenant.slug}". A pull request will appear on GitHub within ~30 seconds. Merge it to bring the new tenant online.`,
       runsUrl,
+      runUrl: result.runUrl,
     })
   },
 }
@@ -92,33 +144,25 @@ export const deployEndpoint: Endpoint = {
   method: 'post',
   handler: async (req) => {
     if (!isSuperAdmin(req.user)) {
-      return json({ ok: false, message: 'Only super-admins can deploy tenants.' }, 403)
+      return json({ ok: false, message: 'Only super-admins can run a full redeploy.' }, 403)
     }
     const id = extractId(req)
     if (!id) return json({ ok: false, message: 'Missing tenant id.' }, 400)
 
     const tenant = await loadTenant(req, id)
     if (!tenant) return json({ ok: false, message: 'Tenant not found.' }, 404)
-    if (!tenant.slug) {
-      return json({ ok: false, message: 'Tenant has no slug. Save the tenant first.' }, 400)
-    }
 
-    const workflow = tenant.githubWorkflow || 'tenant-deploy.yml'
-    const result = await dispatchWorkflow({
-      workflow,
-      inputs: {
-        tenant_slug: tenant.slug,
-        reason: 'manual deploy from admin',
+    const result = await dispatchTenantDeploy(req, tenant, 'manual redeploy from admin')
+    return json(
+      {
+        ok: result.ok,
+        message: result.ok
+          ? `Redeploy dispatched for "${tenant.slug}". Status updates when CI finishes (~2 minutes).`
+          : result.message,
+        runsUrl: result.runsUrl,
+        runUrl: result.runUrl,
       },
-    })
-    const runsUrl = workflowRunsUrl(workflow)
-    if (!result.ok) {
-      return json({ ok: false, message: result.error ?? 'GitHub dispatch failed.', runsUrl }, result.status)
-    }
-    return json({
-      ok: true,
-      message: `Deploy dispatched for "${tenant.slug}". The Worker will be updated in ~2 minutes.`,
-      runsUrl,
-    })
+      result.status,
+    )
   },
 }

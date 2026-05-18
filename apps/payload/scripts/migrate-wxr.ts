@@ -10,7 +10,7 @@
  *   1. Ensures a `tenants` row exists for --slug; creates one if not.
  *   2. Reads <item> entries from the WXR file.
  *   3. For each <item post_type="post">    -> creates a `blog-posts` row.
- *   4. For each <item post_type="page">    -> creates a `pages` row.
+ *      (WordPress pages are skipped — static pages live in the Astro app.)
  *   5. Maps WP `<wp:status>publish</wp:status>` to upserted rows.
  *      Drafts and revisions are skipped.
  *
@@ -236,7 +236,6 @@ async function main(): Promise<void> {
   const items = arrayify(data?.rss?.channel?.item) as Array<Record<string, unknown>>
 
   let posts = 0
-  let pages = 0
   let skipped = 0
 
   for (const item of items) {
@@ -246,7 +245,7 @@ async function main(): Promise<void> {
       continue
     }
     const postType = cdata(item['wp:post_type'])
-    if (postType !== 'post' && postType !== 'page') {
+    if (postType !== 'post') {
       skipped++
       continue
     }
@@ -266,65 +265,41 @@ async function main(): Promise<void> {
     const modifiedRaw = cdata(item['wp:post_modified_gmt'])
     const updatedDate = modifiedRaw ? new Date(modifiedRaw) : undefined
 
-    if (postType === 'post') {
-      const categories = arrayify(item.category)
-        .map((c) => cdata(c))
-        .filter((s) => s && s !== 'Geen categorie')
-        .map((value) => ({ value }))
+    const categories = arrayify(item.category)
+      .map((c) => cdata(c))
+      .filter((s) => s && s !== 'Geen categorie')
+      .map((value) => ({ value }))
 
-      const existing = await payload.find({
-        collection: 'blog-posts',
-        where: { and: [{ tenant: { equals: tenantId } }, { slug: { equals: slug } }] },
-        limit: 1,
-      })
-      const baseData = {
-        tenant: tenantId,
-        title,
-        slug,
-        description,
-        pubDate: pubDate.toISOString(),
-        updatedDate: updatedDate?.toISOString(),
-        categories,
-        content: markdownToLexicalState(markdown),
-      } as never
+    const existing = await payload.find({
+      collection: 'blog-posts',
+      where: { and: [{ tenant: { equals: tenantId } }, { slug: { equals: slug } }] },
+      limit: 1,
+    })
+    const baseData = {
+      tenant: tenantId,
+      title,
+      slug,
+      description,
+      pubDate: pubDate.toISOString(),
+      updatedDate: updatedDate?.toISOString(),
+      categories,
+      content: markdownToLexicalState(markdown),
+    } as never
 
-      if (existing.docs[0]) {
-        await payload.update({ collection: 'blog-posts', id: existing.docs[0].id, data: baseData })
-      } else {
-        await payload.create({ collection: 'blog-posts', data: baseData })
-      }
-      posts++
+    if (existing.docs[0]) {
+      await payload.update({ collection: 'blog-posts', id: existing.docs[0].id, data: baseData })
     } else {
-      const existing = await payload.find({
-        collection: 'pages',
-        where: { and: [{ tenant: { equals: tenantId } }, { slug: { equals: slug } }] },
-        limit: 1,
-      })
-      const baseData = {
-        tenant: tenantId,
-        title,
-        slug,
-        description,
-        pubDate: pubDate.toISOString(),
-        updatedDate: updatedDate?.toISOString(),
-        content: markdownToLexicalState(markdown),
-      } as never
-
-      if (existing.docs[0]) {
-        await payload.update({ collection: 'pages', id: existing.docs[0].id, data: baseData })
-      } else {
-        await payload.create({ collection: 'pages', data: baseData })
-      }
-      pages++
+      await payload.create({ collection: 'blog-posts', data: baseData })
     }
+    posts++
 
-    if (args.limit && posts + pages >= args.limit) {
+    if (args.limit && posts >= args.limit) {
       console.log('[migrate-wxr] reached --limit')
       break
     }
   }
 
-  console.log(`[migrate-wxr] done. posts=${posts} pages=${pages} skipped=${skipped}`)
+  console.log(`[migrate-wxr] done. posts=${posts} skipped=${skipped} (WP pages not imported)`)
   process.exit(0)
 }
 

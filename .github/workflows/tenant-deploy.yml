@@ -1,23 +1,37 @@
 name: Tenant deploy
 
-# Triggered by the Payload -> webhook receiver after a content change.
-# Builds and deploys ONLY the tenant whose slug is passed in.
 on:
   workflow_dispatch:
     inputs:
       tenant_slug:
-        description: 'Tenant slug (matches apps/sites/<slug>)'
+        description: 'Tenant slug'
         required: true
         type: string
       reason:
-        description: 'What triggered the deploy (collection + id)'
+        description: 'What triggered the deploy'
         required: false
         type: string
+      deploy_mode:
+        description: 'monorepo | external'
+        required: false
+        type: string
+        default: monorepo
+      github_repo:
+        description: 'owner/repo for external client site'
+        required: false
+        type: string
+      github_branch:
+        description: 'Branch for external repo'
+        required: false
+        type: string
+        default: main
+      blog_content_path:
+        description: 'Blog markdown path in site repo'
+        required: false
+        type: string
+        default: src/content/blog
 
 concurrency:
-  # Coalesce multiple webhook fires for the same tenant — only the latest run
-  # finishes, the rest are cancelled. Saves CI minutes when an editor saves
-  # many docs in a burst.
   group: tenant-deploy-${{ github.event.inputs.tenant_slug }}
   cancel-in-progress: true
 
@@ -27,15 +41,33 @@ jobs:
     timeout-minutes: 30
     env:
       TENANT: ${{ github.event.inputs.tenant_slug }}
+      DEPLOY_MODE: ${{ github.event.inputs.deploy_mode || 'monorepo' }}
+      GITHUB_REPO: ${{ github.event.inputs.github_repo }}
+      GITHUB_BRANCH: ${{ github.event.inputs.github_branch || 'main' }}
+      BLOG_CONTENT_PATH: ${{ github.event.inputs.blog_content_path || 'src/content/blog' }}
       PAYLOAD_URL: ${{ secrets.PAYLOAD_URL }}
       PAYLOAD_API_KEY: ${{ secrets.PAYLOAD_API_KEY }}
+      DEPLOY_REPORT_TOKEN: ${{ secrets.DEPLOY_REPORT_TOKEN }}
+      CLOUDFLARE_WORKERS_DEV_SUBDOMAIN: ${{ secrets.CLOUDFLARE_WORKERS_DEV_SUBDOMAIN }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - name: Checkout
+      - name: Checkout platform
         uses: actions/checkout@v4
+        with:
+          path: platform
 
-      - name: Setup pnpm
+      - name: Checkout client site (external)
+        if: env.DEPLOY_MODE == 'external' && env.GITHUB_REPO != ''
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITHUB_REPO }}
+          ref: ${{ env.GITHUB_BRANCH }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: site
+
+      - name: Setup pnpm (platform)
         uses: pnpm/action-setup@v4
         with:
           version: 9.12.0
@@ -45,24 +77,120 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
+          cache-dependency-path: platform/pnpm-lock.yaml
 
-      - name: Resolve tenant path
-        id: tenant
+      - name: Install platform dependencies
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Report deploy in progress
+        if: env.PAYLOAD_URL != ''
+        working-directory: platform
+        run: |
+          pnpm --filter @astropayload/payload report:deploy -- \
+            --slug "$TENANT" \
+            --status in_progress \
+            --run-url "$GITHUB_RUN_URL"
+
+      - name: Resolve monorepo tenant
+        if: env.DEPLOY_MODE != 'external'
+        id: monorepo
+        working-directory: platform
         run: |
           if [ ! -d "apps/sites/${TENANT}" ]; then
-            echo "::error ::No tenant folder at apps/sites/${TENANT}"
+            echo "::error ::No tenant folder at apps/sites/${TENANT}. Connect a GitHub repo or scaffold the site."
             exit 1
           fi
           echo "filter=@astropayload/site-${TENANT}" >> "$GITHUB_OUTPUT"
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Sync content (monorepo)
+        if: env.DEPLOY_MODE != 'external'
+        working-directory: platform
+        run: pnpm --filter ${{ steps.monorepo.outputs.filter }} sync:content
 
-      - name: Sync content from Payload
-        run: pnpm --filter ${{ steps.tenant.outputs.filter }} sync:content
+      - name: Sync content (external)
+        if: env.DEPLOY_MODE == 'external'
+        working-directory: platform
+        env:
+          SITE_ROOT: ${{ github.workspace }}/site
+        run: |
+          pnpm tenant-cli sync --slug "$TENANT" --site "$SITE_ROOT" --blog-path "$BLOG_CONTENT_PATH"
 
-      - name: Build
-        run: pnpm --filter ${{ steps.tenant.outputs.filter }} build
+      - name: Install site dependencies (external)
+        if: env.DEPLOY_MODE == 'external'
+        working-directory: site
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            corepack enable
+            pnpm install --frozen-lockfile
+            echo "pkg=pnpm" >> "$GITHUB_ENV"
+          elif [ -f package-lock.json ]; then
+            npm ci
+            echo "pkg=npm" >> "$GITHUB_ENV"
+          else
+            npm install
+            echo "pkg=npm" >> "$GITHUB_ENV"
+          fi
 
-      - name: Deploy to Cloudflare Workers
-        run: pnpm --filter ${{ steps.tenant.outputs.filter }} deploy
+      - name: Build (monorepo)
+        if: env.DEPLOY_MODE != 'external'
+        working-directory: platform
+        run: pnpm --filter ${{ steps.monorepo.outputs.filter }} build
+
+      - name: Build (external)
+        if: env.DEPLOY_MODE == 'external'
+        working-directory: site
+        env:
+          TENANT: ${{ env.TENANT }}
+        run: |
+          if [ "${{ env.pkg }}" = "pnpm" ]; then pnpm run build; else npm run build; fi
+
+      - name: Deploy to Cloudflare Workers (monorepo)
+        if: env.DEPLOY_MODE != 'external'
+        id: cf_deploy_mono
+        working-directory: platform
+        run: |
+          set -o pipefail
+          pnpm --filter ${{ steps.monorepo.outputs.filter }} deploy 2>&1 | tee deploy.log
+          WORKERS_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | tail -1 || true)
+          echo "workers_url=${WORKERS_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Cloudflare Workers (external)
+        if: env.DEPLOY_MODE == 'external'
+        id: cf_deploy_ext
+        working-directory: site
+        env:
+          TENANT: ${{ env.TENANT }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -o pipefail
+          if [ "${{ env.pkg }}" = "pnpm" ]; then
+            pnpm run deploy 2>&1 | tee deploy.log
+          else
+            npm run deploy 2>&1 | tee deploy.log
+          fi
+          WORKERS_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | tail -1 || true)
+          echo "workers_url=${WORKERS_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Report deploy success
+        if: success() && env.PAYLOAD_URL != ''
+        working-directory: platform
+        run: |
+          WORKERS_URL="${{ steps.cf_deploy_mono.outputs.workers_url }}"
+          if [ -z "$WORKERS_URL" ]; then WORKERS_URL="${{ steps.cf_deploy_ext.outputs.workers_url }}"; fi
+          pnpm --filter @astropayload/payload report:deploy -- \
+            --slug "$TENANT" \
+            --status success \
+            --workers-url "$WORKERS_URL" \
+            --run-url "$GITHUB_RUN_URL"
+
+      - name: Report deploy failure
+        if: failure() && env.PAYLOAD_URL != ''
+        working-directory: platform
+        run: |
+          pnpm --filter @astropayload/payload report:deploy -- \
+            --slug "$TENANT" \
+            --status failure \
+            --run-url "$GITHUB_RUN_URL" \
+            --error "See GitHub Actions run for logs"

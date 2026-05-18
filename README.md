@@ -1,6 +1,6 @@
 # astropayload
 
-A multi-tenant content platform. **One Payload CMS** manages 100–1000 sites; **each site is an independent Astro deployment** on Cloudflare Workers that pulls its content slice from Payload at build time.
+A multi-tenant **blog** platform. **One Payload CMS** manages many sites; **each site is an independent Astro deployment** on Cloudflare Workers that syncs blog posts from Payload at build time.
 
 ```
 astropayload/
@@ -84,4 +84,4 @@ pnpm tenant-cli create --slug new-site --domain new-site.com
 
 - **Payload CMS** (`apps/payload`): Postgres-backed, multi-tenant scoped via `@payloadcms/plugin-multi-tenant`. Media stored in Cloudflare R2.
 - **Tenant Astro app** (`apps/sites/<slug>`): Hybrid output (mostly static + a few SSR routes). Build-time `sync:content` pulls only this tenant's data and writes files that the existing `astro:content` collections already understand.
-- **Webhook → CI**: Payload `afterChange` POSTs to a webhook receiver, which dispatches a GitHub Actions workflow for the affected tenant. Only that tenant rebuilds and re-deploys (via Wrangler).
+- **Manual publish → CI**: Editors click **Publish content** in Payload; that dispatches `tenant-deploy.yml` for that tenant only (sync + build + Wrangler deploy). Saves do not auto-deploy.

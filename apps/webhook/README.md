@@ -1,27 +1,38 @@
 # @astropayload/webhook
 
-Tiny Cloudflare Worker that receives content-change webhooks from Payload and dispatches the GitHub Actions `tenant-deploy.yml` workflow for the affected tenant.
+Legacy Cloudflare Worker: receives content-change webhooks from Payload and dispatches `tenant-deploy.yml`.
 
-## Flow
+**Production no longer uses this by default.** Editors publish via **Publish content** in the Payload admin (manual deploy). Saves do not trigger CI.
+
+## When you still need this worker
+
+- You explicitly re-enable `afterChangeNotify` hooks on content collections **and** set `webhookEnabled` on a tenant row.
+- You want auto-deploy on every save for a specific integration (not recommended for editorial workflows).
+
+## Flow (legacy)
 
 ```
-Payload afterChange/afterDelete
+Payload afterChange/afterDelete  (only if hooks are wired)
     -> POST https://webhook.example.com/  { tenantSlug, collection, id, operation }
         -> GitHub workflow_dispatch  { tenant_slug: ... }
-            -> .github/workflows/tenant-deploy.yml
-                -> pnpm sync:content && pnpm build && pnpm deploy   (only the affected tenant)
+            -> tenant-deploy.yml  (sync + build + deploy)
 ```
-
-GitHub Actions handles deduplication via the `concurrency` group, so a burst of saves on one tenant collapses into one deploy.
 
 ## Setup
 
 ```sh
-pnpm wrangler secret put WEBHOOK_TOKEN      # same value as Payload's WEBHOOK_TOKEN
-pnpm wrangler secret put GITHUB_TOKEN       # fine-grained PAT, actions:write
-pnpm wrangler secret put GITHUB_OWNER       # yourorg
-pnpm wrangler secret put GITHUB_REPO        # astropayload
+cd apps/webhook
+pnpm wrangler secret put WEBHOOK_TOKEN
+pnpm wrangler secret put GITHUB_TOKEN
+pnpm wrangler secret put GITHUB_OWNER
+pnpm wrangler secret put GITHUB_REPO
 pnpm deploy
 ```
 
-Then point Payload's `WEBHOOK_URL` env var at the deployed Worker URL.
+Point Payload `WEBHOOK_URL` at the deployed Worker URL only if you use auto-deploy.
+
+## Preferred workflow (manual publish)
+
+1. Editors save blog posts, pages, etc. (CMS only — no CI).
+2. When ready, click **Publish content to live site** (banner on content screens or tenant page).
+3. One GitHub Actions run syncs all tenant content and deploys.

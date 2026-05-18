@@ -4,68 +4,15 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { TENANT } from '../consts';
 
-// Recent editorial articles
 const recentPosts = (await getCollection('blog'))
 	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-	.slice(0, 3);
+	.slice(0, 6);
 
 const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
 	day: 'numeric',
 	month: 'long',
 	year: 'numeric',
 });
-
-// Featured top-10 roundups — try well-known categories first, fall back alphabetically.
-const allTop10s = (
-	await getCollection('moneyPages', (e) => e.data.page_type === 'top10')
-).filter((e) => e.data.page_type === 'top10');
-
-const preferredSlugs = [
-	'beste-airfryer',
-	'beste-koffiezetapparaat',
-	'beste-koekenpan',
-	'beste-blender',
-	'beste-messenset',
-	'beste-keukenmachine',
-];
-const featured = [];
-const takenSlugs = new Set<string>();
-for (const slug of preferredSlugs) {
-	const hit = allTop10s.find((e) => e.data.slug === slug);
-	if (hit) {
-		featured.push(hit);
-		takenSlugs.add(hit.data.slug);
-	}
-}
-if (featured.length < 6) {
-	const fallback = allTop10s
-		.filter((e) => !takenSlugs.has(e.data.slug))
-		.sort((a, b) => {
-			if (a.data.page_type !== 'top10' || b.data.page_type !== 'top10') return 0;
-			return (a.data.top10.category_singular ?? '').localeCompare(
-				b.data.top10.category_singular ?? ''
-			);
-		});
-	while (featured.length < 6 && fallback.length) {
-		featured.push(fallback.shift()!);
-	}
-}
-
-// Top cities for the keukenzaken teaser
-const allBusinesses = await getCollection(
-	'moneyPages',
-	(e) => e.data.page_type === 'business'
-);
-const cityCount = new Map<string, number>();
-for (const b of allBusinesses) {
-	if (b.data.page_type !== 'business') continue;
-	const c = b.data.business.city;
-	if (!c) continue;
-	cityCount.set(c, (cityCount.get(c) ?? 0) + 1);
-}
-const topCities = [...cityCount.entries()]
-	.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-	.slice(0, 6);
 
 const siteRoot = new URL('/', Astro.site).toString();
 const jsonLd = {
@@ -86,59 +33,29 @@ const jsonLd = {
 			description: TENANT.siteDescription,
 			inLanguage: TENANT.locale,
 			publisher: { '@id': `${siteRoot}#organization` },
-			potentialAction: {
-				'@type': 'SearchAction',
-				target: {
-					'@type': 'EntryPoint',
-					urlTemplate: `${siteRoot}?s={search_term_string}`,
-				},
-				'query-input': 'required name=search_term_string',
-			},
 		},
 	],
 };
 ---
 
-<BaseLayout
-	title={`${TENANT.name} — Onafhankelijke reviews van keukenproducten`}
-	description="Onafhankelijke reviews van airfryers, keukenmachines, fornuizen en meer. Vind het beste keukenproduct voor jouw keuken."
-	jsonLd={jsonLd}
->
-	<!-- HERO -->
+<BaseLayout title={TENANT.siteTitle} description={TENANT.siteDescription} jsonLd={jsonLd}>
 	<section class="mx-auto max-w-4xl px-4 py-16 text-center md:py-24">
 		<h1 class="text-4xl font-bold tracking-tight text-navy-700 md:text-6xl">
-			Ontdek de beste keukenproducten
+			{TENANT.name}
 		</h1>
 		<p class="mx-auto mt-6 max-w-2xl text-lg text-gray-500 md:text-xl">
-			Onafhankelijke reviews van airfryers, keukenmachines, fornuizen en meer.
+			{TENANT.siteDescription}
 		</p>
 		<p class="mt-8">
-			<a href="/reviews/" class="btn">Bekijk alle reviews</a>
+			<a href="/blog/" class="btn">Bekijk alle artikelen</a>
 		</p>
 	</section>
 
-	<!-- INTRO (preserved from live keukenfaqs.nl) -->
-	<section class="mx-auto max-w-prose px-4 pb-8">
-		<div class="prose mx-auto">
-			<p>
-				Een keuken is veel meer dan een plek om alleen je maaltijden te
-				bereiden. Het is een plek om samen te komen, je dag te bespreken en
-				te genieten van smaken en geuren.
-			</p>
-			<p>
-				Koken is meer dan enkel een lekkere maaltijd bereiden. Koken brengt
-				mensen samen. Kijk snel wat jij nodig hebt om samen te koken in een
-				perfecte keuken.
-			</p>
-		</div>
-	</section>
-
-	<!-- RECENT ARTICLES -->
 	<section class="mx-auto max-w-6xl px-4 py-12">
 		<div class="flex items-end justify-between">
-			<h2 class="text-2xl font-bold text-navy-900 md:text-3xl">Recente artikelen</h2>
+			<h2 class="text-2xl font-bold text-navy-900 md:text-3xl">Laatste artikelen</h2>
 			<a href="/blog/" class="text-sm font-semibold text-navy-700 no-underline hover:text-coral-600">
-				Bekijk alle artikelen →
+				Alle artikelen →
 			</a>
 		</div>
 		<ul class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -181,73 +98,5 @@ const jsonLd = {
 				</li>
 			))}
 		</ul>
-	</section>
-
-	<!-- FEATURED REVIEWS -->
-	<section class="mx-auto max-w-6xl px-4 py-12">
-		<div class="flex items-end justify-between">
-			<h2 class="text-2xl font-bold text-navy-900 md:text-3xl">Populaire reviews</h2>
-			<a href="/reviews/" class="text-sm font-semibold text-navy-700 no-underline hover:text-coral-600">
-				Alle reviews →
-			</a>
-		</div>
-		<ul class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-			{featured.map((r) => {
-				if (r.data.page_type !== 'top10') return null;
-				const plural = r.data.top10.category_plural ?? r.data.top10.category_singular;
-				const heroImage = r.data.top10.products[0]?.image_url ?? null;
-				return (
-					<li>
-						<a
-							href={`/${r.data.slug}/`}
-							class="group block h-full overflow-hidden rounded-lg border border-gray-200 bg-white no-underline transition-shadow hover:shadow-md"
-						>
-							<div class="flex aspect-[16/10] w-full items-center justify-center bg-gradient-to-br from-navy-700 to-navy-900 p-4">
-								{heroImage && (
-									<img
-										src={heroImage}
-										alt=""
-										width="400"
-										height="400"
-										loading="lazy"
-										decoding="async"
-										class="h-full w-full object-contain"
-									/>
-								)}
-							</div>
-							<div class="p-5">
-								<h3 class="line-clamp-2 text-lg font-bold capitalize text-navy-700 transition-colors group-hover:text-coral-600">
-									{plural}
-								</h3>
-								<p class="mt-1 text-sm text-gray-500">Top 10 beste {plural}</p>
-							</div>
-						</a>
-					</li>
-				);
-			})}
-		</ul>
-	</section>
-
-	<!-- KEUKENZAKEN TEASER -->
-	<section class="mx-auto mb-16 mt-12 max-w-6xl px-4">
-		<div class="rounded-lg bg-gradient-to-br from-navy-700 to-navy-900 p-8 text-center text-white md:p-12">
-			<h2 class="text-2xl font-bold text-white md:text-3xl">Vind een keukenzaak</h2>
-			<p class="mx-auto mt-3 max-w-2xl text-base text-gray-200 md:text-lg">
-				{allBusinesses.length} keukenspecialisten en retailers in {cityCount.size} Nederlandse steden.
-			</p>
-			<ul class="mt-6 flex flex-wrap justify-center gap-2">
-				{topCities.map(([city, n]) => (
-					<li>
-						<span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-sm">
-							{city}
-							<span class="text-xs text-gray-300">{n}</span>
-						</span>
-					</li>
-				))}
-			</ul>
-			<p class="mt-8">
-				<a href="/keukenzaken/" class="btn">Bekijk alle keukenzaken</a>
-			</p>
-		</div>
 	</section>
 </BaseLayout>

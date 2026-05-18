@@ -46,6 +46,10 @@ jobs:
       TENANT_DOMAIN: ${{ github.event.inputs.tenant_domain }}
       TENANT_NAME: ${{ github.event.inputs.tenant_name }}
       TEMPLATE: ${{ github.event.inputs.template }}
+      PAYLOAD_URL: ${{ secrets.PAYLOAD_URL }}
+      PAYLOAD_API_KEY: ${{ secrets.PAYLOAD_API_KEY }}
+      DEPLOY_REPORT_TOKEN: ${{ secrets.DEPLOY_REPORT_TOKEN }}
+      GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: Validate slug
         run: |
@@ -80,6 +84,15 @@ jobs:
 
       - name: Install workspace deps
         run: pnpm install --frozen-lockfile
+
+      - name: Report scaffold in progress
+        if: env.PAYLOAD_URL != ''
+        run: |
+          pnpm --filter @astropayload/payload report:deploy -- \
+            --kind scaffold \
+            --slug "$TENANT_SLUG" \
+            --status in_progress \
+            --run-url "$GITHUB_RUN_URL"
 
       - name: Run tenant-cli create
         run: |
@@ -128,12 +141,14 @@ jobs:
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Open pull request
+        id: open_pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # If a PR for this branch already exists, just print its URL.
           existing=$(gh pr list --head "${{ steps.commit.outputs.branch }}" --json url --jq '.[0].url' || true)
           if [ -n "$existing" ]; then
+            echo "pr_url=$existing" >> "$GITHUB_OUTPUT"
             echo "PR already open: $existing"
             echo "::notice ::Existing PR: $existing"
             exit 0
@@ -168,8 +183,30 @@ jobs:
           Review the diff to confirm nothing template-specific leaked in.
           EOF
           sed -i 's/^          //' /tmp/pr-body.md
-          gh pr create \
+          pr_url=$(gh pr create \
             --title "Scaffold tenant: ${TENANT_SLUG}" \
             --body-file /tmp/pr-body.md \
             --head "${{ steps.commit.outputs.branch }}" \
-            --base main
+            --base main)
+          echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
+          echo "Opened PR: $pr_url"
+
+      - name: Report scaffold success
+        if: success() && env.PAYLOAD_URL != ''
+        run: |
+          pnpm --filter @astropayload/payload report:deploy -- \
+            --kind scaffold \
+            --slug "$TENANT_SLUG" \
+            --status success \
+            --run-url "$GITHUB_RUN_URL" \
+            --pr-url "${{ steps.open_pr.outputs.pr_url }}"
+
+      - name: Report scaffold failure
+        if: failure() && env.PAYLOAD_URL != ''
+        run: |
+          pnpm --filter @astropayload/payload report:deploy -- \
+            --kind scaffold \
+            --slug "$TENANT_SLUG" \
+            --status failure \
+            --run-url "$GITHUB_RUN_URL" \
+            --error "See GitHub Actions run for logs"

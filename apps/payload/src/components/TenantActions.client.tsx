@@ -3,28 +3,19 @@
 import { useDocumentInfo } from '@payloadcms/ui'
 import { useState } from 'react'
 
-/**
- * Renders two action buttons at the top of the Tenant edit form:
- *
- *   1. "Scaffold tenant code" — POSTs to /api/tenants/:id/scaffold which
- *       dispatches the tenant-scaffold.yml GitHub workflow. CI creates
- *       apps/sites/<slug>/ and opens a PR for review.
- *
- *   2. "Deploy now" — POSTs to /api/tenants/:id/deploy which dispatches
- *       tenant-deploy.yml. CI syncs content from this Payload, builds the
- *       tenant's Astro app, and ships it to Cloudflare Workers.
- *
- * Both actions are no-ops until the tenant has been saved (we need an id).
- * Both require a super-admin user (enforced server-side in the endpoint).
- */
+import { DeployTargetBadge } from './DeployTargetBadge.client'
+import { useTenantDeployTarget } from './useTenantDeployTarget'
 
 type ApiResult = {
   ok: boolean
   message: string
   runsUrl?: string | null
+  runUrl?: string | null
+  deployMode?: 'monorepo' | 'external'
+  deployTarget?: string
 }
 
-type Action = 'scaffold' | 'deploy'
+type Action = 'scaffold' | 'deploy' | 'publish'
 
 export function TenantActions(): React.ReactElement {
   const { id } = useDocumentInfo()
@@ -32,6 +23,7 @@ export function TenantActions(): React.ReactElement {
   const [result, setResult] = useState<(ApiResult & { kind: Action }) | null>(null)
 
   const tenantId = typeof id === 'string' || typeof id === 'number' ? String(id) : null
+  const { target, loading, refresh } = useTenantDeployTarget(tenantId)
 
   async function run(action: Action) {
     if (!tenantId) return
@@ -54,7 +46,11 @@ export function TenantActions(): React.ReactElement {
               ? 'Done.'
               : `Request failed: ${res.status} ${res.statusText}`,
         runsUrl: body.runsUrl ?? null,
+        runUrl: body.runUrl ?? null,
+        deployMode: body.deployMode,
+        deployTarget: body.deployTarget,
       })
+      if (action === 'publish' && body.ok) refresh()
     } catch (err) {
       setResult({
         kind: action,
@@ -67,6 +63,8 @@ export function TenantActions(): React.ReactElement {
   }
 
   const disabled = !tenantId
+  const publishMode = result?.deployMode ?? target?.mode
+  const publishLabel = result?.deployTarget ?? target?.label
 
   return (
     <div
@@ -78,13 +76,47 @@ export function TenantActions(): React.ReactElement {
         background: 'var(--theme-elevation-50, #f9fafb)',
       }}
     >
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>Tenant actions</div>
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>Publish & deploy</div>
+
+      {!disabled && !loading && target ? (
+        <div style={{ marginBottom: 10 }}>
+          <DeployTargetBadge mode={target.mode} label={target.label} />
+          {target.mode === 'external' && target.githubSetupStatus && target.githubSetupStatus !== 'ready' ? (
+            <div style={{ fontSize: 12, color: 'var(--theme-elevation-500, #6b7280)', marginTop: 6 }}>
+              GitHub setup: {target.githubSetupStatus.replace(/_/g, ' ')} — merge the setup PR or validate the repo.
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <div style={{ fontSize: 13, color: 'var(--theme-elevation-500, #6b7280)', marginBottom: 12 }}>
         {disabled
-          ? 'Save the tenant first to enable these actions.'
-          : 'These buttons trigger CI workflows on GitHub. The scaffold action opens a PR you review and merge; the deploy action builds and ships immediately.'}
+          ? 'Save the tenant first.'
+          : target?.mode === 'external'
+            ? 'Saving blog posts only updates the CMS. Publish syncs markdown into the connected GitHub repo at build time (not committed back by default).'
+            : 'Saving blog posts only updates the CMS. Publish syncs into apps/sites/<slug> and deploys from the monorepo.'}
       </div>
 
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        <button
+          type="button"
+          disabled={disabled || busy !== null}
+          onClick={() => run('publish')}
+          style={{
+            ...buttonStyle(disabled || busy !== null),
+            background: 'var(--theme-success-500, #16a34a)',
+            color: '#fff',
+            borderColor: 'transparent',
+            fontWeight: 600,
+          }}
+        >
+          {busy === 'publish' ? 'Publishing…' : 'Publish content to live site'}
+        </button>
+      </div>
+
+      <div style={{ fontSize: 12, color: 'var(--theme-elevation-500, #6b7280)', marginBottom: 8 }}>
+        Super-admin only
+      </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           type="button"
@@ -94,19 +126,13 @@ export function TenantActions(): React.ReactElement {
         >
           {busy === 'scaffold' ? 'Dispatching…' : 'Scaffold tenant code'}
         </button>
-
         <button
           type="button"
           disabled={disabled || busy !== null}
           onClick={() => run('deploy')}
-          style={{
-            ...buttonStyle(disabled || busy !== null),
-            background: 'var(--theme-success-500, #16a34a)',
-            color: '#fff',
-            borderColor: 'transparent',
-          }}
+          style={buttonStyle(disabled || busy !== null)}
         >
-          {busy === 'deploy' ? 'Dispatching…' : 'Deploy now'}
+          {busy === 'deploy' ? 'Dispatching…' : 'Redeploy (code + content)'}
         </button>
       </div>
 
@@ -126,10 +152,26 @@ export function TenantActions(): React.ReactElement {
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: 2 }}>
-            {result.kind === 'scaffold' ? 'Scaffold' : 'Deploy'}: {result.ok ? 'dispatched' : 'failed'}
+            {result.kind === 'publish'
+              ? 'Publish'
+              : result.kind === 'scaffold'
+                ? 'Scaffold'
+                : 'Redeploy'}
+            : {result.ok ? 'started' : 'failed'}
           </div>
+          {result.kind === 'publish' && result.ok && publishMode && publishLabel ? (
+            <div style={{ marginBottom: 6 }}>
+              <DeployTargetBadge mode={publishMode} label={publishLabel} compact />
+            </div>
+          ) : null}
           <div>{result.message}</div>
-          {result.runsUrl ? (
+          {result.runUrl ? (
+            <div style={{ marginTop: 6 }}>
+              <a href={result.runUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
+                Open workflow run on GitHub →
+              </a>
+            </div>
+          ) : result.runsUrl ? (
             <div style={{ marginTop: 6 }}>
               <a href={result.runsUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
                 View workflow runs on GitHub →

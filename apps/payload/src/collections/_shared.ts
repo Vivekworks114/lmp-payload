@@ -1,4 +1,4 @@
-import type { Field, CollectionBeforeChangeHook } from 'payload'
+import type { Field } from 'payload'
 
 /** SEO metadata fields shared across content collections. */
 export const seoFields = (): Field => ({
@@ -29,14 +29,12 @@ export const slugField = (description?: string): Field => ({
   admin: { description: description ?? 'URL slug. Lowercase, hyphens only.' },
 })
 
-/**
- * Notify the webhook receiver after a content row is created or updated so
- * the right tenant gets a rebuild. The hook is best-effort: errors are
- * logged but never block the save.
- */
-export const notifyWebhook: CollectionBeforeChangeHook = async () => {
-  // Real implementation lives in `src/hooks/notifyWebhook.ts` and is wired up
-  // by each collection's `hooks.afterChange`. This export is kept here only
-  // to centralise the import path.
-  return
+/** Publish bar on list + edit views (manual publish — no auto-deploy on save). */
+export const contentPublishComponents = {
+  list: {
+    beforeListTable: ['/components/PublishContentBar.client#PublishContentBar'],
+  },
+  edit: {
+    beforeDocumentControls: ['/components/PublishContentBar.client#PublishContentBar'],
+  },
 }

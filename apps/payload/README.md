@@ -1,6 +1,6 @@
 # @astropayload/payload
 
-Single Payload v3 CMS that powers every tenant site.
+Single Payload v3 CMS that powers every tenant site. **Blog-only** — one shared schema for all tenants.
 
 ## Stack
 
@@ -8,7 +8,7 @@ Single Payload v3 CMS that powers every tenant site.
 - **Postgres** via `@payloadcms/db-postgres` (Neon recommended for prod)
 - **Cloudflare R2** via `@payloadcms/storage-s3` (with `tenants/<slug>/` prefix per upload)
 - **Lexical** rich text editor
-- **`@payloadcms/plugin-multi-tenant`** scoping every content collection by tenant
+- **`@payloadcms/plugin-multi-tenant`** scoping blog + media by tenant
 
 ## Setup
 
@@ -21,36 +21,27 @@ pnpm dev                       # http://localhost:3000/admin
 pnpm payload generate:types    # regenerate src/payload-types.ts
 ```
 
-The first time you boot, Payload's `push: true` (dev only) will create all tables. In production, use `payload migrate:create` + `payload migrate` instead.
-
 ## Collections
 
-| Slug          | Scope     | Purpose                                                                  |
-| ------------- | --------- | ------------------------------------------------------------------------ |
-| `tenants`     | global    | One row per site. Domain, theme tokens, analytics, affiliate config.     |
-| `users`       | global    | Admin users. Role-gated and tenant-scoped via plugin.                    |
-| `blog-posts`  | tenant    | Editorial articles. Matches keukenfaqs `blog` Zod schema.                |
-| `pages`       | tenant    | Static pages.                                                            |
-| `top10s`      | tenant    | "Top 10 beste X" affiliate roundups.                                     |
-| `products`    | tenant    | Single-product reviews.                                                  |
-| `businesses`  | tenant    | Retailer/store directory entries.                                        |
-| `media`       | tenant    | Uploads (R2 backed, tenant-prefixed).                                    |
-| `redirects`   | tenant    | URL redirects (preserved migration link equity).                         |
-| `nav-menus`   | tenant    | Header/footer/mobile navigation.                                         |
+| Slug          | Scope  | Purpose |
+| ------------- | ------ | ------- |
+| `tenants`     | global | One row per site: domain, branding, SEO, analytics |
+| `users`       | global | Admin users (roles + tenant access) |
+| `blog-posts`  | tenant | Articles (title, slug, body, categories, tags, SEO) |
+| `media`       | tenant | Images for blog hero / OG (R2) |
 
-## Webhooks → tenant rebuilds
+Static pages (Home, Contact, About) live in each tenant's **Astro app** (`apps/sites/<slug>/src/pages/`), not in Payload.
 
-Every tenant-scoped collection has `afterChange` and `afterDelete` hooks that POST to `WEBHOOK_URL` with `{ tenantSlug, collection, id, operation }`. The webhook receiver (a Cloudflare Worker) dispatches the matching GitHub Actions workflow to rebuild and re-deploy only that tenant. See [.github/workflows/tenant-deploy.yml](../../.github/workflows/tenant-deploy.yml).
+## Publishing to the live site
 
-## Multi-tenant plugin
+Saves update Postgres only. Editors click **Publish content to live site** to run `tenant-deploy.yml` (sync blog → build → deploy).
 
-`@payloadcms/plugin-multi-tenant` auto-injects a `tenant` relationship into every collection listed in `payload.config.ts`, layers a `where[tenant][in]` filter into all queries, and adds a tenant switcher to the admin UI. See: https://payloadcms.com/docs/plugins/multi-tenant.
+See [docs/PRODUCTION.md](../../docs/PRODUCTION.md) and [apps/webhook/README.md](../webhook/README.md).
 
 ## WordPress import
 
 ```sh
-pnpm migrate:wxr -- --wxr ./export.xml --slug keukenfaqs --domain keukenfaqs.nl
-pnpm migrate:money-pages -- --slug keukenfaqs --scraped-dir ../../keukenfaqs-main/migration/scraped/money-pages
+pnpm migrate:wxr -- --wxr ./export.xml --slug my-site --domain my-site.com
 ```
 
-These scripts use Payload's Local API, so they require `DATABASE_URI` and run inside the same Node process as Payload.
+Imports **posts only**. WP pages are skipped (build those as Astro routes or hardcoded pages).

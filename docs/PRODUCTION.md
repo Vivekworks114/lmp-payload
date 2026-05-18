@@ -137,9 +137,20 @@ In the repo settings → **Secrets and variables → Actions**, add:
 | `CLOUDFLARE_API_TOKEN` | Token with Workers Scripts:Edit on your account |
 | `CLOUDFLARE_ACCOUNT_ID` | Found in Cloudflare dashboard right sidebar |
 | `PAYLOAD_URL` | Your CMS URL, e.g. `https://cms.yourcompany.com` |
-| `PAYLOAD_API_KEY` | A dedicated CI user's API key (don't reuse your personal one) |
+| `PAYLOAD_API_KEY` | A dedicated CI user's API key (super-admin; don't reuse your personal one) |
+| `DEPLOY_REPORT_TOKEN` | Optional. Shared secret for `POST /api/tenants/report-deploy` if you prefer not to use the API key in CI |
+| `CLOUDFLARE_WORKERS_DEV_SUBDOMAIN` | Optional. Account workers.dev subdomain used to build `https://<slug>.<subdomain>.workers.dev` when wrangler output cannot be parsed |
 
-These get injected into `tenant-deploy.yml` at runtime.
+These get injected into `tenant-deploy.yml`, `tenant-scaffold.yml`, and `tenant-repo-setup.yml` at runtime.
+
+**External client repos** (tenant has `githubRepo` set): `GITHUB_TOKEN` must be able to **read** the client repo and open setup PRs. After the setup PR merges, either the platform workflow polls for merge (30 min) or the client repo workflow notifies Payload — add on the **client** repo:
+
+| Secret | Value |
+|---|---|
+| `ASTROPAYLOAD_URL` | Same as platform `PAYLOAD_URL` |
+| `ASTROPAYLOAD_REPORT_TOKEN` | Same as platform `DEPLOY_REPORT_TOKEN` |
+
+See [ONBOARDING.md](./ONBOARDING.md) section **C** for the full external-repo SOP.
 
 ### 1.7 Best practice — rotate the dev secrets
 
@@ -161,23 +172,14 @@ openssl rand -hex 32
 This is what your editors will do 99% of the time. **No CLI involved.**
 
 1. **Editor opens** `https://cms.yourcompany.com/admin` and logs in.
-2. **Selects a tenant** from the top-left dropdown (e.g. "KeukenFAQs"). The multi-tenant plugin now scopes every query to that tenant.
-3. **Navigates** to a collection (Blog Posts, Pages, Top 10s, etc.) and edits or creates a row.
-4. **Clicks Save**. At this moment, Payload:
-   1. Validates the data against the collection schema (Zod-ish + custom validators).
-   2. Writes to Postgres with the tenant's `tenant_id`.
-   3. Fires the `afterChange` hook in `apps/payload/src/hooks/notifyWebhook.ts`.
-   4. The hook POSTs `{ tenantSlug, collection, id, operation }` to `WEBHOOK_URL` with the `WEBHOOK_TOKEN`.
-5. **Webhook worker** (Cloudflare Worker, `apps/webhook`):
-   1. Verifies the token in the `x-webhook-token` header.
-   2. Resolves the tenant slug.
-   3. Calls GitHub's REST API to dispatch the `tenant-deploy.yml` workflow with input `{ tenant_slug }`.
-6. **GitHub Actions** picks up the dispatch:
-   1. `concurrency: tenant-deploy-${{ inputs.tenant_slug }}` collapses multiple rapid saves into a single deploy per tenant.
-   2. `cancel-in-progress: true` cancels an older in-flight build for the same tenant if a newer one starts.
-   3. Workflow steps: checkout → install → `pnpm tenant-cli sync` → `pnpm --filter ... build` → `pnpm --filter ... deploy`.
-7. **Cloudflare Worker** for that tenant is replaced with the new build. Cold start ~50ms, warm requests <10ms.
-8. **End users** see the change at `https://<tenant-domain>` within ~30–90 seconds of the editor clicking Save.
+2. **Selects a tenant** from the top-left dropdown (e.g. "KeukenFAQs"). The multi-tenant plugin scopes every query to that tenant.
+3. **Edits blog posts** and clicks **Save** as many times as needed. Changes are stored in Postgres only — **the public site does not update yet**.
+4. When all edits are ready, clicks **Publish content to live site** (green bar on content list/edit screens, or on the Tenant row for super-admins). The UI shows the deploy target: **Monorepo** (`apps/sites/<slug>`) or **External repo** (`owner/repo`).
+5. Payload dispatches `tenant-deploy.yml` on GitHub (one run per publish click).
+6. **GitHub Actions**: sync blog from Payload → `build` → `wrangler deploy` (monorepo or checked-out client repo).
+7. **End users** see changes at `https://<tenant-domain>` (or `*.workers.dev` before custom domain) within ~30–90 seconds after publish finishes.
+
+**Saving ≠ live.** Only **Publish** pushes CMS content to the static site.
 
 ### Important: only the affected tenant rebuilds
 
@@ -199,6 +201,8 @@ Prereq: `GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO` are set in `apps/payload/.
 4. GitHub shows a new PR titled *"Scaffold tenant: kookhulpjes"*. Review the diff (a new `apps/sites/kookhulpjes/` folder). **Click Merge**.
 5. Back in the Payload admin, click **"Deploy now"** on the same tenant row. The site builds and deploys in ~2 minutes.
 6. **One last manual step**: Cloudflare dashboard → the `kookhulpjes` Worker → **Triggers → Custom Domains** → add `kookhulpjes.nl`.
+
+After deploy finishes, the tenant edit screen shows **Site URLs** (production, workers.dev, preview) and **Latest deploy** status — updated automatically by CI.
 
 Done. Total clicks: ~6. Zero terminal commands.
 

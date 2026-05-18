@@ -17,8 +17,9 @@
     "prebuild": "pnpm run generate:importmap",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "migrate:wxr": "cross-env NODE_OPTIONS=--no-deprecation tsx --env-file=.env scripts/migrate-wxr.ts",
-    "migrate:money-pages": "cross-env NODE_OPTIONS=--no-deprecation tsx --env-file=.env scripts/migrate-money-pages.ts",
-    "migrate:redirects": "cross-env NODE_OPTIONS=--no-deprecation tsx --env-file=.env scripts/migrate-redirects.ts"
+    "report:deploy": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/report-tenant-deploy.ts",
+    "import:blog-from-repo": "cross-env NODE_OPTIONS=--no-deprecation tsx --env-file=.env scripts/import-blog-from-repo.ts",
+    "report:github-setup": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/report-tenant-github-setup.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "^3.0.0",

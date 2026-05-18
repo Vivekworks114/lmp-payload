@@ -2,7 +2,18 @@ import type { CollectionConfig } from 'payload'
 
 import { isSuperAdmin } from '../access/isSuperAdmin'
 import { publicRead } from '../access/tenantAccess'
-import { deployEndpoint, scaffoldEndpoint } from '../endpoints/tenantActions'
+import {
+  reportDeployEndpoint,
+  reportGithubSetupEndpoint,
+  reportScaffoldEndpoint,
+} from '../endpoints/reportDeploy'
+import {
+  importBlogFromRepoEndpoint,
+  setupGithubRepoEndpoint,
+  validateGithubEndpoint,
+} from '../endpoints/tenantGithub'
+import { deployEndpoint, publishEndpoint, scaffoldEndpoint } from '../endpoints/tenantActions'
+import { DEPLOY_STATUSES, SCAFFOLD_STATUSES } from '../lib/tenantDeployStatus'
 
 /**
  * A tenant = one website. Owns its domain, theme tokens, analytics IDs,
@@ -13,7 +24,7 @@ export const Tenants: CollectionConfig = {
   slug: 'tenants',
   admin: {
     useAsTitle: 'name',
-    defaultColumns: ['name', 'slug', 'domain', 'locale'],
+    defaultColumns: ['name', 'slug', 'domain', 'lastDeployStatus', 'lastDeployAt'],
     group: 'Platform',
   },
   access: {
@@ -22,7 +33,17 @@ export const Tenants: CollectionConfig = {
     update: ({ req }) => isSuperAdmin(req.user),
     delete: ({ req }) => isSuperAdmin(req.user),
   },
-  endpoints: [scaffoldEndpoint, deployEndpoint],
+  endpoints: [
+    scaffoldEndpoint,
+    publishEndpoint,
+    deployEndpoint,
+    validateGithubEndpoint,
+    setupGithubRepoEndpoint,
+    importBlogFromRepoEndpoint,
+    reportDeployEndpoint,
+    reportScaffoldEndpoint,
+    reportGithubSetupEndpoint,
+  ],
   fields: [
     {
       name: 'actions',
@@ -30,6 +51,15 @@ export const Tenants: CollectionConfig = {
       admin: {
         components: {
           Field: '/components/TenantActions.client#TenantActions',
+        },
+      },
+    },
+    {
+      name: 'deployLinks',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '/components/TenantDeployLinks.client#TenantDeployLinks',
         },
       },
     },
@@ -170,18 +200,6 @@ export const Tenants: CollectionConfig = {
           ],
         },
         {
-          label: 'Affiliate',
-          fields: [
-            {
-              name: 'bolPublisherId',
-              type: 'text',
-              admin: { description: 'Bol.com Partner Programma publisher ID (s=...).' },
-            },
-            { name: 'awinId', type: 'text' },
-            { name: 'amazonTag', type: 'text' },
-          ],
-        },
-        {
           label: 'Social',
           fields: [
             {
@@ -196,6 +214,70 @@ export const Tenants: CollectionConfig = {
                 },
                 { name: 'url', type: 'text', required: true },
               ],
+            },
+          ],
+        },
+        {
+          label: 'GitHub',
+          fields: [
+            {
+              name: 'githubConnect',
+              type: 'ui',
+              admin: {
+                components: {
+                  Field: '/components/TenantGitHubConnect.client#TenantGitHubConnect',
+                },
+              },
+            },
+            {
+              name: 'githubRepo',
+              type: 'text',
+              admin: {
+                description:
+                  'Client site repository: owner/repo or https://github.com/owner/repo. When set, publish deploys from this repo instead of apps/sites/<slug>.',
+              },
+            },
+            {
+              name: 'githubBranch',
+              type: 'text',
+              defaultValue: 'main',
+              admin: { description: 'Branch to checkout for build and setup.' },
+            },
+            {
+              name: 'enabledModules',
+              type: 'select',
+              hasMany: true,
+              defaultValue: ['blog'],
+              options: [{ label: 'Blog', value: 'blog' }],
+              admin: {
+                description: 'CMS modules synced on publish. Only blog is supported today.',
+              },
+            },
+            {
+              name: 'blogContentPath',
+              type: 'text',
+              defaultValue: 'src/content/blog',
+              admin: {
+                description: 'Path inside the Astro repo where blog markdown is written on publish.',
+              },
+            },
+            {
+              name: 'githubSetupStatus',
+              type: 'select',
+              defaultValue: 'not_connected',
+              options: [
+                { label: 'Not connected', value: 'not_connected' },
+                { label: 'Validated', value: 'validated' },
+                { label: 'Setup dispatched', value: 'setup_dispatched' },
+                { label: 'Ready', value: 'ready' },
+                { label: 'Failed', value: 'failed' },
+              ],
+              admin: { readOnly: true },
+            },
+            {
+              name: 'githubValidationNotes',
+              type: 'textarea',
+              admin: { readOnly: true, description: 'Output from the last repository validation.' },
             },
           ],
         },
@@ -216,8 +298,108 @@ export const Tenants: CollectionConfig = {
             {
               name: 'webhookEnabled',
               type: 'checkbox',
-              defaultValue: true,
-              admin: { description: 'When unchecked, content changes do NOT trigger a rebuild.' },
+              defaultValue: false,
+              admin: {
+                description:
+                  'Legacy: auto-deploy on every save via webhook. Leave off — editors use Publish content instead.',
+              },
+            },
+            {
+              name: 'lastPublishedAt',
+              type: 'date',
+              admin: {
+                readOnly: true,
+                date: { pickerAppearance: 'dayAndTime' },
+                description: 'When Publish content was last clicked (CI started).',
+              },
+            },
+            {
+              type: 'row',
+              fields: [
+                {
+                  name: 'workersDevUrl',
+                  type: 'text',
+                  admin: {
+                    readOnly: true,
+                    description:
+                      'Default *.workers.dev URL after deploy. Set automatically by CI; attach your custom domain in Cloudflare separately.',
+                  },
+                },
+                {
+                  name: 'previewUrl',
+                  type: 'text',
+                  admin: {
+                    readOnly: true,
+                    description:
+                      'Smoke-test URL before DNS cutover (usually the same as workers.dev until a staging worker exists).',
+                  },
+                },
+              ],
+            },
+            {
+              type: 'row',
+              fields: [
+                {
+                  name: 'lastDeployStatus',
+                  type: 'select',
+                  defaultValue: 'idle',
+                  options: DEPLOY_STATUSES.map((value) => ({ label: value, value })),
+                  admin: { readOnly: true },
+                },
+                {
+                  name: 'lastDeployAt',
+                  type: 'date',
+                  admin: {
+                    readOnly: true,
+                    date: { pickerAppearance: 'dayAndTime' },
+                  },
+                },
+              ],
+            },
+            {
+              name: 'lastDeployRunUrl',
+              type: 'text',
+              admin: { readOnly: true, description: 'Direct link to the latest GitHub Actions deploy run.' },
+            },
+            {
+              name: 'lastDeployError',
+              type: 'textarea',
+              admin: { readOnly: true, description: 'Last deploy failure message (cleared on success).' },
+            },
+            {
+              type: 'row',
+              fields: [
+                {
+                  name: 'lastScaffoldStatus',
+                  type: 'select',
+                  defaultValue: 'idle',
+                  options: SCAFFOLD_STATUSES.map((value) => ({ label: value, value })),
+                  admin: { readOnly: true },
+                },
+                {
+                  name: 'lastScaffoldAt',
+                  type: 'date',
+                  admin: {
+                    readOnly: true,
+                    date: { pickerAppearance: 'dayAndTime' },
+                  },
+                },
+              ],
+            },
+            {
+              name: 'lastScaffoldRunUrl',
+              type: 'text',
+              admin: { readOnly: true },
+            },
+            {
+              name: 'lastScaffoldPrUrl',
+              type: 'text',
+              admin: { readOnly: true, description: 'Pull request opened by the scaffold workflow.' },
+            },
+            {
+              name: 'lastScaffoldError',
+              type: 'textarea',
+              admin: { readOnly: true },
             },
           ],
         },

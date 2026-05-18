@@ -17,6 +17,7 @@ interface BlogDoc {
   categories?: Array<{ value: string }> | null
   tags?: Array<{ value: string }> | null
   content: unknown
+  extra?: Record<string, unknown> | null
 }
 
 export interface FormattedFile {
@@ -40,6 +41,13 @@ export function formatBlogMarkdown(doc: BlogDoc): FormattedFile {
   }
   if (doc.tags?.length) {
     frontmatter.tags = doc.tags.map((t) => t.value).filter(Boolean)
+  }
+  if (doc.extra && typeof doc.extra === 'object') {
+    for (const [k, v] of Object.entries(doc.extra)) {
+      if (v !== undefined && v !== null && !(k in frontmatter)) {
+        frontmatter[k] = v
+      }
+    }
   }
 
   const yaml = toYaml(frontmatter)

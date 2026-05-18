@@ -5,6 +5,12 @@ import type {
 } from 'payload'
 
 /**
+ * Legacy auto-deploy hook (disabled on content collections).
+ *
+ * Production uses manual "Publish content" instead of deploy-on-save.
+ * To re-enable auto-deploy per tenant, wire `afterChangeNotify` back on
+ * collections and set `webhookEnabled` on the tenant row.
+ *
  * Build the payload sent to the webhook receiver. Anything that needs to
  * route a rebuild MUST go here:
  *   - tenant.slug   -> picks the GitHub Actions workflow run

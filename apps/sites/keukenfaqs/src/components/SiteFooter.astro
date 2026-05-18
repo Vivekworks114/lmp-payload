@@ -4,163 +4,40 @@ import { TENANT } from '../consts';
 
 const year = new Date().getFullYear();
 
-// Payload-driven footer menus. When the editor has assigned ANY menu with
-// location === 'footer' in the admin, those become the source of truth and
-// REPLACE the hardcoded `categoryGroups` columns below. When none are set,
-// the hardcoded columns serve as a fallback so a fresh tenant still ships
-// with a usable footer. Same pattern as SiteHeader.astro.
-const footerMenus = TENANT.navMenus.filter((m) => m.location === 'footer');
-const useDynamicFooter = footerMenus.length > 0;
-
-// Latest 6 blog posts for the "Laatste tips" column.
-const latestTips = (await getCollection('blog'))
+const latestPosts = (await getCollection('blog'))
 	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
 	.slice(0, 6);
-
-// Product-category link groups — mirrors the live keukenfaqs.nl footer.
-// All slugs verified to exist in our top10 collection.
-const categoryGroups = [
-	{
-		title: 'Koelkasten',
-		links: [
-			{ label: 'Koelkast', slug: 'beste-koelkast' },
-			{ label: 'Wijnkoeler', slug: 'beste-wijnkoeler' },
-			{ label: 'IJsmachine', slug: 'beste-ijsmachine' },
-			{ label: 'Mini vriezer', slug: 'beste-mini-vriezer' },
-			{ label: 'Wijnkoelkast', slug: 'beste-wijnkoelkast' },
-			{ label: 'Koelvriescombinatie', slug: 'beste-koelvriescombinatie' },
-			{ label: 'Amerikaanse koelkast', slug: 'beste-amerikaanse-koelkast' },
-		],
-	},
-	{
-		title: 'Koffiegerei',
-		links: [
-			{ label: 'Koffiebonen', slug: 'beste-koffiebonen' },
-			{ label: 'Pistonmachine', slug: 'beste-pistonmachine' },
-			{ label: 'Koffiezetapparaat', slug: 'beste-koffiezetapparaat' },
-			{ label: 'Nespresso machine', slug: 'beste-nespresso-machine' },
-			{ label: 'Cappuccino apparaat', slug: 'beste-cappuccino-apparaat' },
-			{ label: 'Latte macchiato glazen', slug: 'beste-latte-macchiato-glazen' },
-			{
-				label: 'Volautomatische koffiemachine',
-				slug: 'beste-volautomatische-koffiemachine',
-			},
-		],
-	},
-	{
-		title: 'Mixers',
-		links: [
-			{ label: 'Mixer', slug: 'beste-mixer' },
-			{ label: 'Blender', slug: 'beste-blender' },
-			{ label: 'Handmixer', slug: 'beste-handmixer' },
-			{ label: 'Mini blender', slug: 'beste-mini-blender' },
-			{ label: 'Keukenmixer', slug: 'beste-keukenmixer' },
-			{ label: 'Smoothiemaker', slug: 'beste-smoothiemaker' },
-			{ label: 'Keukenmachine', slug: 'beste-keukenmachine' },
-		],
-	},
-];
-
-// Featured business listings — the live footer lists 10 but 3 were among the
-// dropped stubs (gov-s-keuken, multimartbonaire, oasis-guesthouse-bonaire).
-// The 7 below are confirmed present in src/data/money-pages/.
-const featuredBusinesses = [
-	{ label: 'Au Four', slug: 'au-four' },
-	{ label: 'Your Kitchen', slug: 'your-kitchen' },
-	{ label: 'Keukens.nl B.V.', slug: 'keukens-nl-b-v-' },
-	{ label: 'Immanuel Design', slug: 'immanuel-design' },
-	{ label: 'Your New Kitchen', slug: 'your-new-kitchen' },
-	{ label: 'Total Home Concept', slug: 'total-home-concept' },
-	{ label: 'Divers Paradise Bonaire', slug: 'divers-paradise-bonaire' },
-];
 ---
 
 <footer class="mt-16 bg-gray-50 text-gray-500">
 	<div class="mx-auto max-w-6xl px-4 py-12">
-		<!-- PRIMARY ROW: brand + 3 category columns -->
-		<div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
-			<div class="lg:col-span-2">
+		<div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+			<div>
 				<a href="/" class="text-xl font-bold text-navy-700 no-underline">
 					{TENANT.name}
 				</a>
-				<p class="mt-3 max-w-sm text-sm leading-relaxed">
-					Bij keukenfaqs geloven wij dat de keuken het middelpunt van het huis
-					is. Het is de plek waar je samen eet, deelt en geniet. Daarom
-					besteden wij veel aandacht aan deze belangrijke plek, zodat jij
-					kan genieten van jouw ideale keuken.
-				</p>
+				<p class="mt-3 max-w-sm text-sm leading-relaxed">{TENANT.siteDescription}</p>
 				<nav aria-label="Site navigatie" class="mt-5">
 					<ul class="flex flex-wrap gap-x-5 gap-y-2 text-sm">
 						<li>
 							<a href="/blog/" class="no-underline hover:text-coral-600">Blog</a>
 						</li>
 						<li>
-							<a href="/keukenzaken/" class="no-underline hover:text-coral-600">
-								Keukenzaken
-							</a>
+							<a href="/over-ons/" class="no-underline hover:text-coral-600">Over ons</a>
 						</li>
 						<li>
 							<a href="/contact/" class="no-underline hover:text-coral-600">Contact</a>
-						</li>
-						<li>
-							<a href="/over-ons/" class="no-underline hover:text-coral-600">
-								Over ons
-							</a>
 						</li>
 					</ul>
 				</nav>
 			</div>
 
-			{useDynamicFooter
-				? footerMenus.map((menu) => (
-						<nav aria-label={menu.name}>
-							<h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-navy-900">
-								{menu.name}
-							</h2>
-							<ul class="space-y-2 text-sm">
-								{menu.items.map((item) => (
-									<li>
-										<a
-											href={item.href}
-											rel={item.rel ?? undefined}
-											class="no-underline hover:text-coral-600"
-										>
-											{item.label}
-										</a>
-									</li>
-								))}
-							</ul>
-						</nav>
-					))
-				: categoryGroups.map((group) => (
-						<nav aria-label={group.title}>
-							<h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-navy-900">
-								{group.title}
-							</h2>
-							<ul class="space-y-2 text-sm">
-								{group.links.map((link) => (
-									<li>
-										<a
-											href={`/${link.slug}/`}
-											class="no-underline hover:text-coral-600"
-										>
-											{link.label}
-										</a>
-									</li>
-								))}
-							</ul>
-						</nav>
-					))}
-		</div>
-
-		<!-- SECONDARY ROW: Laatste tips + Keukenwinkel -->
-		<div class="mt-10 grid grid-cols-1 gap-8 md:grid-cols-2">
-			<nav aria-label="Laatste tips">
+			<nav aria-label="Laatste artikelen">
 				<h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-navy-900">
-					Laatste tips
+					Laatste artikelen
 				</h2>
 				<ul class="space-y-2 text-sm">
-					{latestTips.map((post) => (
+					{latestPosts.map((post) => (
 						<li>
 							<a
 								href={`/${post.id}/`}
@@ -171,29 +48,11 @@ const featuredBusinesses = [
 						</li>
 					))}
 				</ul>
-			</nav>
-
-			<nav aria-label="Keukenwinkel">
-				<h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-navy-900">
-					Keukenwinkel
-				</h2>
-				<ul class="space-y-2 text-sm">
-					{featuredBusinesses.map((biz) => (
-						<li>
-							<a
-								href={`/${biz.slug}/`}
-								class="no-underline hover:text-coral-600"
-							>
-								{biz.label}
-							</a>
-						</li>
-					))}
-					<li>
-						<a href="/keukenzaken/" class="font-semibold text-navy-700 no-underline hover:text-coral-600">
-							Bekijk alle keukenzaken →
-						</a>
-					</li>
-				</ul>
+				<p class="mt-4">
+					<a href="/blog/" class="text-sm font-semibold text-navy-700 no-underline hover:text-coral-600">
+						Alle artikelen →
+					</a>
+				</p>
 			</nav>
 		</div>
 
@@ -202,14 +61,6 @@ const featuredBusinesses = [
 			<nav aria-label="Footer secundair">
 				<a href="/sitemap/" class="text-navy-700 no-underline hover:text-coral-600">
 					Sitemap
-				</a>
-				<span class="mx-2 text-gray-300" aria-hidden="true">|</span>
-				<a href="/blog/" class="text-navy-700 no-underline hover:text-coral-600">
-					Blog
-				</a>
-				<span class="mx-2 text-gray-300" aria-hidden="true">|</span>
-				<a href="/contact/" class="text-navy-700 no-underline hover:text-coral-600">
-					Contact
 				</a>
 			</nav>
 		</div>

@@ -1,110 +1,159 @@
 # Onboarding a new tenant
 
-Three flavours, depending on where the content is coming from.
+Four paths, depending on where the site code and content live.
 
 ## 0. Prerequisites (one-time)
 
 ```sh
 pnpm install
 cp apps/payload/.env.example apps/payload/.env
-# fill in: DATABASE_URI, PAYLOAD_SECRET, R2_*
+# fill in: DATABASE_URI, PAYLOAD_SECRET, R2_*, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO
 pnpm --filter @astropayload/payload dev
-# in another tab, create your super-admin user at http://localhost:3000/admin
-# generate an API key for that user (Users -> your row -> "Enable API Key")
+# create super-admin at http://localhost:3000/admin
+# enable API key on your user row
 export PAYLOAD_URL=http://localhost:3000
 export PAYLOAD_API_KEY=<your-api-key>
 ```
 
-## A. Brand-new tenant (no existing site)
+Platform GitHub repo secrets (for CI): `PAYLOAD_URL`, `PAYLOAD_API_KEY`, `GITHUB_TOKEN`, `CLOUDFLARE_*`, optional `DEPLOY_REPORT_TOKEN`.
+
+---
+
+## A. Brand-new tenant (monorepo site)
+
+Site code lives in **this** repo under `apps/sites/<slug>/`.
 
 ```sh
-# 1. Scaffold the tenant app + Payload row in one go.
 pnpm tenant-cli create --slug new-site --domain new-site.com --name "New Site"
-
-# 2. Add content in the Payload admin (or via API).
-
-# 3. Sync content into the tenant app and run it.
-TENANT=new-site pnpm --filter @astropayload/site-new-site sync:content
+# Add blog posts in Payload admin
+TENANT=new-site pnpm --filter @astropayload/site-new-site sync:content   # local preview
 TENANT=new-site pnpm --filter @astropayload/site-new-site dev
 ```
 
-## B. Migrate from WordPress (WXR + scraped money pages)
+**Publish:** Tenants → **Publish content**, or Blog list → **Publish content to live site**.  
+Deploy target shown in admin: **Monorepo · apps/sites/new-site**.
 
-The migration scripts use Payload's Local API, so the Payload dev server does **not** need to be running. They connect to the same Postgres in `apps/payload/.env`.
+---
+
+## B. Migrate from WordPress (WXR — blog posts only)
 
 ```sh
-# 1. Scaffold the tenant code folder. migrate:wxr will create the Payload row.
 pnpm tenant-cli create --slug new-site --domain new-site.com
-
-# 2. Import WordPress posts + pages. Creates the `tenants` row if missing.
 pnpm --filter @astropayload/payload run migrate:wxr \
   --wxr /path/to/wordpress-export.xml \
   --slug new-site \
   --domain new-site.com
-# Tip: append `--limit 3` first for a dry run.
-
-# 3. Import scraped money pages (one JSON per page).
-pnpm --filter @astropayload/payload run migrate:money-pages \
-  --slug new-site \
-  --scraped-dir /path/to/scraped/money-pages
-
-# 4. Optional: redirect-preserve dropped URLs to a sensible target.
-pnpm --filter @astropayload/payload run migrate:redirects \
-  --slug new-site \
-  --tsv /path/to/dropped-urls.txt \
-  --target /keukenzaken/
-
-# 5. Pull everything into the tenant app and run.
 TENANT=new-site pnpm --filter @astropayload/site-new-site sync:content
-TENANT=new-site pnpm --filter @astropayload/site-new-site dev
 ```
 
-### Direct flag reference for the migration scripts
+WP pages are **not** imported — static pages stay as Astro routes in the site repo.
 
-| Script                 | Required flags                                 | Optional |
-| ---------------------- | ---------------------------------------------- | -------- |
-| `migrate:wxr`          | `--wxr <path>` `--slug <slug>` `--domain <d>`  | `--limit N` |
-| `migrate:money-pages`  | `--slug <slug>` `--scraped-dir <dir>`          | `--limit N` |
-| `migrate:redirects`    | `--slug <slug>` `--tsv <file>` `--target <p>`  |          |
+| Script        | Required flags                                | Optional   |
+| ------------- | --------------------------------------------- | ---------- |
+| `migrate:wxr` | `--wxr <path>` `--slug <slug>` `--domain <d>` | `--limit N` |
 
-## C. Deploy a tenant to production
+---
+
+## C. Client-owned GitHub repo (external site)
+
+Use when each client has their **own** Astro repo. Payload remains the **blog** source of truth; publish syncs markdown at **build time** (CI does not commit synced files back by default).
+
+### 1. Create tenant in Payload
+
+- **Slug** must match `TENANT` / Wrangler / `astropayload.config.json`.
+- **GitHub** tab: set `githubRepo` (`owner/repo`), branch, enable **blog** module, set `blogContentPath` if not `src/content/blog`.
+
+### 2. Validate & setup
+
+On the tenant **GitHub** tab (super-admin):
+
+1. **Validate repository** — checks access, branch, `astro.config`, blog folder.
+2. **Setup repository (PR)** — opens a PR on the client repo with:
+   - `astropayload.config.json`
+   - `scripts/sync-content.mjs` (optional local dev)
+   - `src/content/blog/` (or your path)
+   - `.github/workflows/astropayload-setup-notify.yml`
+
+3. **Merge the PR** on the client repo.
+
+### 3. Mark setup ready (automatic)
+
+After merge, `githubSetupStatus` becomes **ready** via either:
+
+- **Platform poll** — `tenant-repo-setup.yml` waits up to 30 minutes after opening the PR, or
+- **Client workflow** — add secrets on the **client** repo:
+  - `ASTROPAYLOAD_URL` — your Payload URL
+  - `ASTROPAYLOAD_REPORT_TOKEN` — same as platform `DEPLOY_REPORT_TOKEN`
+
+### 4. Optional: seed Payload from existing repo markdown
+
+**Import blog from repo (once)** — dispatches `tenant-import-blog.yml`, or locally:
 
 ```sh
-# Locally:
-TENANT=new-site pnpm tenant-cli deploy
-
-# In CI (preferred): the Payload -> webhook -> GitHub Actions chain handles
-# this automatically on every content change. See:
-#   apps/webhook/        (the Cloudflare Worker receiver)
-#   .github/workflows/tenant-deploy.yml
+pnpm tenant-cli import-blog --slug new-site --site /path/to/client-repo
 ```
 
-## Anatomy of a tenant deploy
+### 5. Editorial workflow
+
+1. Editors write **Blog posts** in Payload (save = CMS only).
+2. **Publish content** → `tenant-deploy.yml` with `deploy_mode=external`:
+   - Checkout client repo
+   - `tenant-cli sync` from platform
+   - `build` + `wrangler deploy` in client repo
+
+Admin shows: **External repo · owner/repo (branch)**.
+
+### Client repo requirements
+
+- Astro project with `build` and `deploy` scripts (Wrangler).
+- Cloudflare credentials in **platform** GitHub secrets (used during deploy).
+- `GITHUB_TOKEN` on platform must read the client repo.
+
+---
+
+## D. Publish content to production
+
+Editors save in Payload, then click **Publish content to live site** (no deploy on every save).
+
+```sh
+# CLI (from monorepo root):
+pnpm tenant-cli deploy --slug new-site
+pnpm tenant-cli deploy --slug new-site --site /path/to/client-repo   # external
+
+# API:
+POST /api/tenants/:id/publish
+```
+
+Legacy auto-deploy webhook is **off** by default (`webhookEnabled`).
+
+---
+
+## Anatomy of a publish
 
 ```
-Payload change saved
-  -> afterChange hook (apps/payload/src/hooks/notifyWebhook.ts)
-    -> POST $WEBHOOK_URL with { tenantSlug, collection, id, operation }
-      -> Cloudflare Worker (apps/webhook) verifies token + dispatches
-        -> GitHub Actions tenant-deploy.yml with input { tenant_slug }
-          -> pnpm --filter @astropayload/site-<slug> sync:content
-          -> pnpm --filter @astropayload/site-<slug> build
-          -> pnpm --filter @astropayload/site-<slug> deploy   (wrangler)
-            -> https://<domain> updated
+Editor clicks Publish in Payload admin
+  -> POST /api/tenants/:id/publish
+    -> dispatch tenant-deploy.yml
+      -> deploy_mode: monorepo | external
+      -> sync blog markdown from Payload (payload-sdk)
+      -> astro build
+      -> wrangler deploy
+      -> POST /api/tenants/report-deploy (status + workers.dev URL)
 ```
 
-GitHub Actions' `concurrency: tenant-deploy-${slug}` collapses a burst of saves into one deploy per tenant.
+`concurrency: tenant-deploy-${slug}` collapses rapid clicks into one run per tenant.
+
+---
 
 ## Tenant CLI reference
 
 ```
-pnpm tenant-cli create   --slug X --domain D [--name "Display"] [--template path]
-pnpm tenant-cli sync     --slug X [--site path] [--url payload-url] [--api-key key]
-pnpm tenant-cli migrate  --slug X --domain D [--wxr file.xml] [--scraped dir]
-pnpm tenant-cli deploy   --slug X
+pnpm tenant-cli create      --slug X --domain D [--name "Display"]
+pnpm tenant-cli sync        --slug X [--site path] [--blog-path path]
+pnpm tenant-cli import-blog --slug X --site path [--blog-path path]
+pnpm tenant-cli migrate     --slug X --domain D [--wxr file.xml]
+pnpm tenant-cli deploy      --slug X [--site path] [--blog-path path]
 ```
-
-Environment fallbacks:
 
 | Flag         | Env var           |
 | ------------ | ----------------- |
@@ -112,17 +161,41 @@ Environment fallbacks:
 | `--url`      | `PAYLOAD_URL`     |
 | `--api-key`  | `PAYLOAD_API_KEY` |
 
-## File map produced by `sync:content`
+---
+
+## What sync writes (blog module)
+
+**Monorepo:**
 
 ```
 apps/sites/<slug>/
-  tenant.config.json                        # tenant identity (name, domain, theme, GA4, ...)
-  public/_redirects                         # Cloudflare-format redirect rules
-  src/content/blog/<slug>.md                # blog-posts collection
-  src/content/pages/<slug>.md               # pages collection
-  src/data/money-pages/top10/<slug>.json    # top10s collection
-  src/data/money-pages/product/<slug>.json  # products collection
-  src/data/money-pages/business/<slug>.json # businesses collection
+  tenant.config.json
+  src/content/blog/<slug>.md
 ```
 
-These shapes match `apps/sites/keukenfaqs/src/content.config.ts` verbatim — no schema changes needed on the Astro side.
+**External repo** (path configurable):
+
+```
+<client-repo>/
+  src/content/blog/<slug>.md    # default; overwritten on publish (clean sync)
+```
+
+Static pages (home, contact, etc.) are Astro files in git — **not** synced from Payload.
+
+Custom frontmatter: use **Blog posts → extra** (JSON); merged into markdown on publish.
+
+---
+
+## CI report endpoints
+
+| Endpoint                         | Purpose                          |
+| -------------------------------- | -------------------------------- |
+| `POST /api/tenants/report-deploy` | Deploy status + workers URL      |
+| `POST /api/tenants/report-scaffold` | Monorepo scaffold PR status    |
+| `POST /api/tenants/report-github-setup` | External repo setup ready   |
+
+Auth: super-admin API key or header `x-deploy-report-token: $DEPLOY_REPORT_TOKEN`.
+
+```sh
+pnpm --filter @astropayload/payload report:github-setup -- --slug X --status ready
+```

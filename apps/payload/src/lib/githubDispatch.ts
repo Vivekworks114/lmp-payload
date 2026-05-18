@@ -6,8 +6,6 @@
  *
  * Env vars (read at call time):
  *   GITHUB_TOKEN  - PAT or fine-grained token with `actions:write` on the repo.
- *                   For the scaffold workflow it also needs `contents:write`
- *                   and `pull_requests:write`.
  *   GITHUB_OWNER  - e.g. "yourorg"
  *   GITHUB_REPO   - e.g. "astropayload"
  *   GITHUB_BRANCH - optional, defaults to "main".
@@ -23,15 +21,37 @@ export interface DispatchResult {
   ok: boolean
   status: number
   error?: string
+  runId?: number
+  runUrl?: string
 }
 
-export async function dispatchWorkflow(opts: DispatchOptions): Promise<DispatchResult> {
+export interface WorkflowRunSummary {
+  id: number
+  html_url: string
+  status: string | null
+  conclusion: string | null
+  created_at: string
+}
+
+const GITHUB_HEADERS = {
+  Accept: 'application/vnd.github+json',
+  'X-GitHub-Api-Version': '2022-11-28',
+  'User-Agent': 'astropayload-admin',
+} as const
+
+function repoBase(): { token: string; owner: string; repo: string } | null {
   const token = process.env.GITHUB_TOKEN
   const owner = process.env.GITHUB_OWNER
   const repo = process.env.GITHUB_REPO
+  if (!token || !owner || !repo) return null
+  return { token, owner, repo }
+}
+
+export async function dispatchWorkflow(opts: DispatchOptions): Promise<DispatchResult> {
+  const base = repoBase()
   const ref = opts.ref ?? process.env.GITHUB_BRANCH ?? 'main'
 
-  if (!token || !owner || !repo) {
+  if (!base) {
     return {
       ok: false,
       status: 500,
@@ -40,17 +60,15 @@ export async function dispatchWorkflow(opts: DispatchOptions): Promise<DispatchR
     }
   }
 
-  const url = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${opts.workflow}/dispatches`
+  const url = `https://api.github.com/repos/${base.owner}/${base.repo}/actions/workflows/${opts.workflow}/dispatches`
 
   let res: Response
   try {
     res = await fetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'astropayload-admin',
+        Authorization: `Bearer ${base.token}`,
+        ...GITHUB_HEADERS,
       },
       body: JSON.stringify({ ref, inputs: opts.inputs }),
     })
@@ -71,13 +89,69 @@ export async function dispatchWorkflow(opts: DispatchOptions): Promise<DispatchR
     }
   }
 
-  return { ok: true, status: 204 }
+  const run = await waitForLatestWorkflowRun(opts.workflow, { ref, dispatchedAfterMs: Date.now() - 5000 })
+  return {
+    ok: true,
+    status: 204,
+    runId: run?.id,
+    runUrl: run?.html_url,
+  }
 }
 
 /**
- * Human-friendly URL where a user can watch the dispatched workflow run.
- * GitHub's dispatch endpoint returns 204 with no body, so we can't get the
- * exact run ID; we link to the workflow's runs page instead.
+ * After workflow_dispatch returns 204, poll until a matching run appears.
+ */
+export async function waitForLatestWorkflowRun(
+  workflow: string,
+  options?: {
+    ref?: string
+    maxAttempts?: number
+    delayMs?: number
+    /** Only accept runs created after this timestamp (ms). */
+    dispatchedAfterMs?: number
+  },
+): Promise<WorkflowRunSummary | null> {
+  const base = repoBase()
+  if (!base) return null
+
+  const ref = options?.ref ?? process.env.GITHUB_BRANCH ?? 'main'
+  const maxAttempts = options?.maxAttempts ?? 12
+  const delayMs = options?.delayMs ?? 1500
+  const cutoff = options?.dispatchedAfterMs ?? Date.now() - 60_000
+
+  const listUrl = `https://api.github.com/repos/${base.owner}/${base.repo}/actions/workflows/${workflow}/runs?per_page=10&branch=${encodeURIComponent(ref)}&event=workflow_dispatch`
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      await new Promise((r) => setTimeout(r, delayMs))
+    }
+
+    try {
+      const res = await fetch(listUrl, {
+        headers: {
+          Authorization: `Bearer ${base.token}`,
+          ...GITHUB_HEADERS,
+        },
+      })
+      if (!res.ok) continue
+
+      const data = (await res.json()) as { workflow_runs?: WorkflowRunSummary[] }
+      const runs = data.workflow_runs ?? []
+      const match = runs.find((run) => {
+        const created = Date.parse(run.created_at)
+        return Number.isFinite(created) && created >= cutoff - 5000
+      })
+      if (match) return match
+    } catch {
+      // retry
+    }
+  }
+
+  return null
+}
+
+/**
+ * Link to the workflow runs list (fallback when poll times out).
  */
 export function workflowRunsUrl(workflow: string): string | null {
   const owner = process.env.GITHUB_OWNER
