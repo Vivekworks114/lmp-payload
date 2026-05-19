@@ -192,6 +192,10 @@ export interface Tenant {
    * Path inside the Astro repo where blog markdown is written on publish.
    */
   blogContentPath?: string | null;
+  /**
+   * File extension for blog posts synced from Payload on publish.
+   */
+  blogFileExtension?: ('md' | 'mdx') | null;
   githubSetupStatus?: ('not_connected' | 'validated' | 'setup_dispatched' | 'ready' | 'failed') | null;
   /**
    * Output from the last repository validation.
@@ -213,6 +217,10 @@ export interface Tenant {
    * When Publish content was last clicked (CI started).
    */
   lastPublishedAt?: string | null;
+  /**
+   * When blog markdown was last imported from the connected repo into Payload.
+   */
+  blogImportedFromRepoAt?: string | null;
   /**
    * Default *.workers.dev URL after deploy. Set automatically by CI; attach your custom domain in Cloudflare separately.
    */
@@ -533,12 +541,14 @@ export interface TenantsSelect<T extends boolean = true> {
   githubBranch?: T;
   enabledModules?: T;
   blogContentPath?: T;
+  blogFileExtension?: T;
   githubSetupStatus?: T;
   githubValidationNotes?: T;
   cloudflareProject?: T;
   githubWorkflow?: T;
   webhookEnabled?: T;
   lastPublishedAt?: T;
+  blogImportedFromRepoAt?: T;
   workersDevUrl?: T;
   previewUrl?: T;
   lastDeployStatus?: T;

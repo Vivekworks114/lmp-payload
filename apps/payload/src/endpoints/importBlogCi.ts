@@ -139,7 +139,7 @@ export const importBlogContentEndpoint: Endpoint = {
       await req.payload.update({
         collection: 'tenants',
         id: tenantId,
-        data: { blogImportedFromRepoAt: new Date().toISOString() },
+        data: { blogImportedFromRepoAt: new Date().toISOString() } as never,
         overrideAccess: true,
       })
     }
