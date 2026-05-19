@@ -30,6 +30,34 @@ export function resolveSitePath(siteRoot: string): string {
   return path.resolve(base, siteRoot)
 }
 
+export interface BlogPostFilePayload {
+  filename: string
+  content: string
+}
+
+/** Read .md / .mdx files from a site repo for CI import. */
+export async function readBlogPostsFromSite(
+  options: Pick<ImportBlogFromRepoOptions, 'siteRoot' | 'blogPath' | 'limit'>,
+): Promise<{ blogDir: string; posts: BlogPostFilePayload[] }> {
+  const blogPath = options.blogPath?.replace(/^\/+/, '') || 'src/content/blog'
+  const blogDir = path.join(resolveSitePath(options.siteRoot), blogPath)
+
+  let entries: string[]
+  try {
+    entries = await fs.readdir(blogDir)
+  } catch {
+    throw new Error(`Blog directory not found: ${blogDir}`)
+  }
+
+  const files = listBlogContentFilenames(entries, options.limit)
+  const posts: BlogPostFilePayload[] = []
+  for (const file of files) {
+    const content = await fs.readFile(path.join(blogDir, file), 'utf8')
+    posts.push({ filename: file, content })
+  }
+  return { blogDir, posts }
+}
+
 export async function countTenantBlogPosts(
   payload: Payload,
   tenantId: string | number,

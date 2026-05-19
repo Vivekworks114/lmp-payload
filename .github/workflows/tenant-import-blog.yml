@@ -29,6 +29,7 @@ jobs:
       BLOG_PATH: ${{ github.event.inputs.blog_content_path || 'src/content/blog' }}
       PAYLOAD_URL: ${{ secrets.PAYLOAD_URL }}
       PAYLOAD_API_KEY: ${{ secrets.PAYLOAD_API_KEY }}
+      DEPLOY_REPORT_TOKEN: ${{ secrets.DEPLOY_REPORT_TOKEN }}
     steps:
       - name: Checkout platform
         uses: actions/checkout@v4

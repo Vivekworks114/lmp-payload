@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { isSuperAdmin } from '../access/isSuperAdmin'
 import { publicRead } from '../access/tenantAccess'
+import { importBlogContentEndpoint } from '../endpoints/importBlogCi'
 import {
   reportDeployEndpoint,
   reportGithubSetupEndpoint,
@@ -93,6 +94,7 @@ export const Tenants: CollectionConfig = {
     reportDeployEndpoint,
     reportScaffoldEndpoint,
     reportGithubSetupEndpoint,
+    importBlogContentEndpoint,
   ],
   fields: [
     {

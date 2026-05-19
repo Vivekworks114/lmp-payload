@@ -2,7 +2,7 @@
 /**
  * Import blog markdown into Payload via REST API (for CI / no DATABASE_URI).
  *
- *   PAYLOAD_URL=... PAYLOAD_API_KEY=... pnpm import:blog-from-repo-api -- \
+ *   PAYLOAD_URL=... DEPLOY_REPORT_TOKEN=... pnpm import:blog-from-repo-api -- \
  *     --slug keukenfaqs --site /path/to/repo
  */
 import { resolveSitePath } from '../src/lib/importBlogFromRepo'
@@ -41,8 +41,9 @@ async function main(): Promise<void> {
   const args = parseArgs()
   const url = process.env.PAYLOAD_URL?.replace(/\/+$/, '')
   const apiKey = process.env.PAYLOAD_API_KEY
-  if (!url || !apiKey) {
-    console.error('[import-blog-api] PAYLOAD_URL and PAYLOAD_API_KEY are required.')
+  const deployReportToken = process.env.DEPLOY_REPORT_TOKEN
+  if (!url || (!apiKey && !deployReportToken)) {
+    console.error('[import-blog-api] PAYLOAD_URL and DEPLOY_REPORT_TOKEN (or super-admin PAYLOAD_API_KEY) required.')
     process.exit(1)
   }
 
@@ -51,6 +52,7 @@ async function main(): Promise<void> {
   const result = await importBlogFromRepoViaApi({
     url,
     apiKey,
+    deployReportToken,
     tenantSlug: args.slug,
     siteRoot: args.site,
     blogPath: args.blogPath,

@@ -141,7 +141,8 @@ In the repo settings → **Secrets and variables → Actions**, add:
 | `DEPLOY_REPORT_TOKEN` | **Recommended.** Same value as `DEPLOY_REPORT_TOKEN` in Payload `.env` on the CMS server. CI sends header `x-deploy-report-token`. Without this (and without a valid super-admin `PAYLOAD_API_KEY`), deploy status reports return 401. |
 | `CLOUDFLARE_WORKERS_DEV_SUBDOMAIN` | Optional. Account workers.dev subdomain used to build `https://<slug>.<subdomain>.workers.dev` when wrangler output cannot be parsed |
 | `EXTERNAL_REPO_GITHUB_TOKEN` | **Required for external client repos.** Fine-grained or classic PAT with **read** access to each client repo (e.g. `zbseollp/keukenfaqs`). The built-in `GITHUB_TOKEN` only sees the astropayload repo — checkout of other repos fails with "Repository not found". Can be the same PAT as Payload `GITHUB_TOKEN` if scoped to those repos. |
-| `PAYLOAD_API_KEY` | Also used for **auto-import on first publish** (CI posts blog rows via REST API — database credentials stay on the Payload server only). |
+| `DEPLOY_REPORT_TOKEN` | **Required for CI blog import** (`POST /api/tenants/import-blog-content`). Same value as on the CMS server. |
+| `PAYLOAD_API_KEY` | Optional for auto-import if not using `DEPLOY_REPORT_TOKEN`; must be a **super-admin** API key (tenant editors get 403 on `POST /api/blog-posts`). |
 
 These get injected into `tenant-deploy.yml`, `tenant-scaffold.yml`, and `tenant-repo-setup.yml` at runtime. **Do not** add `DATABASE_URI` or `PAYLOAD_SECRET` to GitHub — CI never connects to Postgres directly.
 

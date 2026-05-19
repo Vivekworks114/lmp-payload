@@ -91,7 +91,7 @@ You do **not** need to `git clone` the client repo on the VPS for production. Gi
 
 On the **first publish** (and after **Setup repository** when the setup PR merges), CI runs `auto-import-blog-if-empty`: if the tenant has **zero** blog posts in Payload, markdown from the connected repo is imported into the CMS, then sync + deploy continue.
 
-**GitHub secrets for auto-import:** `PAYLOAD_URL` and `PAYLOAD_API_KEY` (CI calls the CMS REST API — no Postgres URL in GitHub). Also `EXTERNAL_REPO_GITHUB_TOKEN`, Cloudflare secrets.
+**GitHub secrets for auto-import:** `PAYLOAD_URL`, `DEPLOY_REPORT_TOKEN` (must match Payload `.env` — recommended), optional super-admin `PAYLOAD_API_KEY`, `EXTERNAL_REPO_GITHUB_TOKEN`, Cloudflare secrets. No Postgres URL in GitHub.
 
 To force a full re-import anytime, use **Import blog from repo (once)** in the tenant GitHub tab (dispatches `tenant-import-blog.yml`), or locally:
 

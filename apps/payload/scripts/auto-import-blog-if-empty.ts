@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * CI helper: import repo markdown into Payload via REST API (no DATABASE_URI).
- * Requires PAYLOAD_URL and PAYLOAD_API_KEY (CI service user).
+ * Requires PAYLOAD_URL and DEPLOY_REPORT_TOKEN and/or PAYLOAD_API_KEY.
  *
  *   pnpm auto-import-blog-if-empty -- --slug keukenfaqs --site /path/to/repo
  */
@@ -40,8 +40,11 @@ async function main(): Promise<void> {
   const args = parseArgs()
   const url = process.env.PAYLOAD_URL?.replace(/\/+$/, '')
   const apiKey = process.env.PAYLOAD_API_KEY
-  if (!url || !apiKey) {
-    console.error('[auto-import-blog] PAYLOAD_URL and PAYLOAD_API_KEY are required (no database access from CI).')
+  const deployReportToken = process.env.DEPLOY_REPORT_TOKEN
+  if (!url || (!apiKey && !deployReportToken)) {
+    console.error(
+      '[auto-import-blog] PAYLOAD_URL and DEPLOY_REPORT_TOKEN (or super-admin PAYLOAD_API_KEY) are required.',
+    )
     process.exit(1)
   }
 
@@ -50,6 +53,7 @@ async function main(): Promise<void> {
   const outcome = await autoImportBlogIfEmptyViaApi({
     url,
     apiKey,
+    deployReportToken,
     tenantSlug: args.slug,
     siteRoot: args.site,
     blogPath: args.blogPath,
