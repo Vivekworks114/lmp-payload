@@ -218,6 +218,15 @@ pm2 reload payload
 
 Process config: `ecosystem.config.cjs` at repo root. **Tenant sites** still deploy via GitHub Actions (Publish in admin), not via this VPS script.
 
+If admin returns 500 with `column ... does not exist` after a code update, production Postgres is behind the app (push is off in production). Run once:
+
+```sh
+psql "$DATABASE_URI" -f apps/payload/scripts/sync-prod-schema.sql
+./scripts/vps-deploy-payload.sh --fresh
+```
+
+(`vps-deploy-payload.sh` runs this SQL automatically when `psql` and `DATABASE_URI` are available in `apps/payload/.env`.)
+
 ---
 
 ## 2. Day-2 content authoring flow (the happy path)

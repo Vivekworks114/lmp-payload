@@ -28,9 +28,6 @@ for arg in "$@"; do
     --first-run) FIRST_RUN=1 ;;
     -h|--help)
       echo "Usage: $0 [--first-run] [--fresh] [--no-pull]"
-      echo "  --first-run  pm2 start (instead of reload) if not running yet"
-      echo "  --fresh      rm -rf apps/payload/.next before build (after env/key changes)"
-      echo "  --no-pull    skip git pull"
       exit 0
       ;;
     *)
@@ -45,6 +42,11 @@ if [[ ! -f apps/payload/.env ]]; then
   exit 1
 fi
 
+set -a
+# shellcheck disable=SC1091
+source apps/payload/.env
+set +a
+
 mkdir -p /var/log/payload
 
 echo "==> Repo: $REPO_ROOT"
@@ -56,6 +58,13 @@ fi
 
 echo "==> pnpm install"
 pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+
+if [[ -n "${DATABASE_URI:-}" ]] && command -v psql >/dev/null 2>&1; then
+  echo "==> sync Postgres schema (new columns)"
+  psql "$DATABASE_URI" -v ON_ERROR_STOP=1 -f apps/payload/scripts/sync-prod-schema.sql
+elif [[ -n "${DATABASE_URI:-}" ]]; then
+  echo "==> skip schema sync (install postgresql-client for psql, or run sync-prod-schema.sql manually)"
+fi
 
 if [[ "$FRESH_BUILD" -eq 1 ]]; then
   echo "==> Removing apps/payload/.next (fresh build)"
@@ -81,8 +90,7 @@ if command -v pm2 >/dev/null 2>&1; then
   pm2 status
   echo "Logs: pm2 logs payload --lines 100"
 else
-  echo "pm2 not installed. Start manually:"
-  echo "  cd apps/payload && NODE_ENV=production pnpm run start:prod"
+  echo "pm2 not installed. Start manually: cd apps/payload && NODE_ENV=production pnpm run start:prod"
 fi
 
 echo "==> Done."
