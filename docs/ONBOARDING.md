@@ -61,7 +61,7 @@ Use when each client has their **own** Astro repo. Payload remains the **blog** 
 ### 1. Create tenant in Payload
 
 - **Slug** must match `TENANT` / Wrangler / `astropayload.config.json`.
-- **GitHub** tab: set `githubRepo` (`owner/repo`), branch, enable **blog** module, set `blogContentPath` if not `src/content/blog`.
+- **GitHub** tab: set `githubRepo` (`owner/repo`), branch, enable **blog** module, set `blogContentPath` (e.g. `content/blog`), and **blog file extension** (`md` or `mdx`) to match the Astro repo.
 
 ### 2. Validate & setup
 

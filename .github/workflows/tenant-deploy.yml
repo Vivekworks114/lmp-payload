@@ -136,7 +136,7 @@ jobs:
           SITE_ROOT: ${{ github.workspace }}/site
         run: |
           pnpm tenant-cli sync --slug "$TENANT" --site "$SITE_ROOT" --blog-path "$BLOG_CONTENT_PATH"
-          echo "::notice ::Check log line '[tenant-cli sync] done: { blog: N }'. N=0 means no posts in Payload — check auto-import step (needs PAYLOAD_API_KEY with create access) or import manually."
+          echo "::notice ::Check log line '[tenant-cli sync] done: { blog: N }'. N=0 means no posts in Payload — check auto-import (reads .md and .mdx) or import manually. Set tenant blog file extension to mdx if the site uses MDX."
 
       - name: Install site dependencies (external)
         if: env.DEPLOY_MODE == 'external'
@@ -187,10 +187,20 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -o pipefail
+          # Build already ran in the previous step — deploy only (do not re-run npm run deploy:
+          # many client repos use "astro build && wrangler deploy" but omit wrangler from package.json).
           if [ "${{ env.pkg }}" = "pnpm" ]; then
-            pnpm run deploy 2>&1 | tee deploy.log
+            if ! pnpm exec wrangler --version >/dev/null 2>&1; then
+              echo "Installing wrangler (missing from client package.json)"
+              pnpm add -D wrangler@^4.84.0
+            fi
+            pnpm exec wrangler deploy 2>&1 | tee deploy.log
           else
-            npm run deploy 2>&1 | tee deploy.log
+            if ! npx wrangler --version >/dev/null 2>&1; then
+              echo "Installing wrangler (missing from client package.json)"
+              npm install -D wrangler@^4.84.0
+            fi
+            npx wrangler deploy 2>&1 | tee deploy.log
           fi
           WORKERS_URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | tail -1 || true)
           echo "workers_url=${WORKERS_URL}" >> "$GITHUB_OUTPUT"

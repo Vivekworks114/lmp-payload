@@ -10,6 +10,10 @@
 ALTER TABLE tenants
   ADD COLUMN IF NOT EXISTS blog_imported_from_repo_at timestamptz;
 
+-- Tenants: .md vs .mdx for publish sync output
+ALTER TABLE tenants
+  ADD COLUMN IF NOT EXISTS blog_file_extension varchar DEFAULT 'md';
+
 -- Users: API keys (auth.useAPIKey in Users collection)
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS enable_a_p_i_key boolean DEFAULT false;

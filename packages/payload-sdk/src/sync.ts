@@ -4,7 +4,7 @@ import path from 'node:path'
 import type { TenantConfig, ThemeTokens } from '@astropayload/core'
 
 import { PayloadClient, type PayloadClientOptions } from './client'
-import { formatBlogMarkdown, type FormattedFile } from './formatters'
+import { formatBlogMarkdown, type BlogFileExtension, type FormattedFile } from './formatters'
 
 export interface SyncOptions extends PayloadClientOptions {
   /** Root of the tenant Astro app (e.g. apps/sites/keukenfaqs). */
@@ -19,7 +19,7 @@ export interface SyncOptions extends PayloadClientOptions {
 
 /**
  * Pull a tenant's blog posts + site identity from Payload and write:
- *   src/content/blog/<slug>.md
+ *   src/content/blog/<slug>.md|.mdx
  *   tenant.config.json
  */
 export async function syncTenantContent(opts: SyncOptions): Promise<{ blog: number }> {
@@ -42,8 +42,10 @@ export async function syncTenantContent(opts: SyncOptions): Promise<{ blog: numb
     if (opts.clean !== false) await rm(dir, { recursive: true, force: true })
     await mkdir(dir, { recursive: true })
 
+    const ext: BlogFileExtension =
+      (tenant as RawTenant).blogFileExtension === 'mdx' ? 'mdx' : 'md'
     const docs = await client.findAll<Parameters<typeof formatBlogMarkdown>[0]>('blog-posts')
-    await Promise.all(docs.map((d) => writeFormatted(dir, formatBlogMarkdown(d))))
+    await Promise.all(docs.map((d) => writeFormatted(dir, formatBlogMarkdown(d, ext))))
     blogCount = docs.length
   }
 
@@ -72,6 +74,7 @@ interface RawTenant {
   gtmId?: string | null
   plausibleDomain?: string | null
   socialLinks?: Array<{ platform: string; url: string }> | null
+  blogFileExtension?: BlogFileExtension | null
 }
 
 function toTenantConfig(t: RawTenant): TenantConfig {

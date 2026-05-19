@@ -71,7 +71,7 @@ export function TenantGitHubConnect(): React.ReactElement {
       <div style={{ fontSize: 13, color: 'var(--theme-elevation-500, #6b7280)', marginBottom: 12 }}>
         {disabled
           ? 'Save the tenant first.'
-          : 'Connect a client-owned Astro repo. Payload is the blog source of truth — publish syncs markdown at build time. On first publish, CI auto-imports repo posts into the CMS if it is empty (no VPS clone needed). Use Import below to force a re-import.'}
+          : 'Connect a client-owned Astro repo. Payload is the blog source of truth — publish syncs blog files at build time. Import reads .md and .mdx; set blog file extension (md/mdx) to match the site. On first publish, CI auto-imports into the CMS if empty.'}
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>

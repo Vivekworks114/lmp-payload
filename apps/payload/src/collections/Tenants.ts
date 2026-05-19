@@ -290,7 +290,21 @@ export const Tenants: CollectionConfig = {
               type: 'text',
               defaultValue: 'src/content/blog',
               admin: {
-                description: 'Path inside the Astro repo where blog markdown is written on publish.',
+                description:
+                  'Path inside the Astro repo where blog files are written on publish (e.g. content/blog or src/content/blog).',
+              },
+            },
+            {
+              name: 'blogFileExtension',
+              type: 'select',
+              defaultValue: 'md',
+              options: [
+                { label: 'Markdown (.md)', value: 'md' },
+                { label: 'MDX (.mdx)', value: 'mdx' },
+              ],
+              admin: {
+                description:
+                  'File extension for blog posts synced from Payload on publish. Match your Astro content collection (e.g. MDX sites use .mdx). Import accepts both .md and .mdx.',
               },
             },
             {

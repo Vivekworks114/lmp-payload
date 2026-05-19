@@ -1,4 +1,4 @@
-export { formatBlogMarkdown, type FormattedFile } from './blog'
+export { formatBlogMarkdown, type BlogFileExtension, type FormattedFile } from './blog'
 export { formatPageMarkdown } from './page'
 export {
   formatTop10Json,

@@ -25,7 +25,12 @@ export interface FormattedFile {
   body: string
 }
 
-export function formatBlogMarkdown(doc: BlogDoc): FormattedFile {
+export type BlogFileExtension = 'md' | 'mdx'
+
+export function formatBlogMarkdown(
+  doc: BlogDoc,
+  extension: BlogFileExtension = 'md',
+): FormattedFile {
   const frontmatter: Record<string, unknown> = {
     title: doc.title,
     description: doc.description,
@@ -58,7 +63,7 @@ export function formatBlogMarkdown(doc: BlogDoc): FormattedFile {
   const yaml = toYaml(frontmatter)
   const md = lexicalToMarkdown(doc.content)
   return {
-    filename: `${doc.slug}.md`,
+    filename: `${doc.slug}.${extension}`,
     body: `---\n${yaml}---\n\n${md}`,
   }
 }

@@ -3,18 +3,12 @@ import path from 'node:path'
 
 import type { Payload } from 'payload'
 
-import { markdownToLexicalState } from './markdownToLexical'
-
-const KNOWN_KEYS = new Set([
-  'title',
-  'description',
-  'pubDate',
-  'updatedDate',
-  'author',
-  'heroImage',
-  'categories',
-  'tags',
-])
+import {
+  blogPostDataFromFile,
+  countBlogContentFilenames,
+  listBlogContentFilenames,
+  slugFromBlogFilename,
+} from './blogContentFiles'
 
 export interface ImportBlogFromRepoOptions {
   tenantSlug: string
@@ -34,47 +28,6 @@ export function resolveSitePath(siteRoot: string): string {
   if (path.isAbsolute(siteRoot)) return siteRoot
   const base = process.env.INIT_CWD || process.env.PWD || process.cwd()
   return path.resolve(base, siteRoot)
-}
-
-function parseFrontmatter(raw: string): { data: Record<string, unknown>; body: string } {
-  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/)
-  if (!match?.[1] || match[2] === undefined) return { data: {}, body: raw.trim() }
-  const data: Record<string, unknown> = {}
-  const block = match[1]
-  const body = match[2].trim()
-  let currentList: string | null = null
-
-  for (const line of block.split('\n')) {
-    const listItem = line.match(/^\s+-\s+(.+)$/)
-    if (listItem?.[1] && currentList) {
-      const arr = (data[currentList] as string[]) ?? []
-      arr.push(listItem[1].replace(/^["']|["']$/g, ''))
-      data[currentList] = arr
-      continue
-    }
-    const kv = line.match(/^([\w-]+):\s*(.*)$/)
-    if (!kv?.[1]) continue
-    const key = kv[1]
-    const value = kv[2] ?? ''
-    if (value === '') {
-      currentList = key
-      data[key] = []
-      continue
-    }
-    currentList = null
-    data[key] = value.replace(/^["']|["']$/g, '')
-  }
-  return { data, body }
-}
-
-function splitKnown(data: Record<string, unknown>) {
-  const known: Record<string, unknown> = {}
-  const extra: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(data)) {
-    if (KNOWN_KEYS.has(k)) known[k] = v
-    else extra[k] = v
-  }
-  return { known, extra }
 }
 
 export async function countTenantBlogPosts(
@@ -115,39 +68,14 @@ export async function importBlogFromRepo(
     throw new Error(`Blog directory not found: ${blogDir}`)
   }
 
-  const files = entries.filter((f) => f.endsWith('.md')).slice(0, options.limit ?? entries.length)
+  const files = listBlogContentFilenames(entries, options.limit)
   let created = 0
   let updated = 0
 
   for (const file of files) {
+    const slug = slugFromBlogFilename(file)!
     const raw = await fs.readFile(path.join(blogDir, file), 'utf8')
-    const { data, body } = parseFrontmatter(raw)
-    const { known, extra } = splitKnown(data)
-    const slug = file.replace(/\.md$/, '')
-    const title = String(known.title ?? slug)
-    const description = String(known.description ?? title).slice(0, 500)
-    const pubDate = known.pubDate
-      ? new Date(String(known.pubDate)).toISOString()
-      : new Date().toISOString()
-
-    const categories = Array.isArray(known.categories)
-      ? (known.categories as string[]).map((value) => ({ value }))
-      : []
-    const tags = Array.isArray(known.tags) ? (known.tags as string[]).map((value) => ({ value })) : []
-
-    const baseData = {
-      tenant: tenantId,
-      title,
-      slug,
-      description,
-      pubDate,
-      updatedDate: known.updatedDate ? new Date(String(known.updatedDate)).toISOString() : undefined,
-      author: known.author ? String(known.author) : undefined,
-      categories,
-      tags,
-      extra: Object.keys(extra).length ? extra : undefined,
-      content: markdownToLexicalState(body),
-    } as never
+    const baseData = blogPostDataFromFile(raw, slug, tenantId) as never
 
     const existing = await payload.find({
       collection: 'blog-posts',
@@ -205,9 +133,9 @@ export async function autoImportBlogIfEmpty(
     return { skipped: true, reason: `no blog folder at ${blogDir}` }
   }
 
-  const mdCount = entries.filter((f) => f.endsWith('.md')).length
-  if (mdCount === 0) {
-    return { skipped: true, reason: `no .md files in ${blogDir}` }
+  const fileCount = countBlogContentFilenames(entries)
+  if (fileCount === 0) {
+    return { skipped: true, reason: `no .md or .mdx files in ${blogDir}` }
   }
 
   const result = await importBlogFromRepo(payload, options)
