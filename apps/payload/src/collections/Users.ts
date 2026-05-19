@@ -26,6 +26,7 @@ export const Users: CollectionConfig = {
     group: 'Platform',
   },
   auth: {
+    useAPIKey: true,
     cookies: {
       // SameSite=lax + Secure (when on HTTPS) is the right combo for an
       // admin reached from its own origin. When deploying behind a reverse

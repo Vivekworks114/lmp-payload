@@ -86,8 +86,24 @@ jobs:
         working-directory: platform
         run: pnpm install --frozen-lockfile
 
+      - name: Seed Payload from repo (first publish only)
+        if: env.PAYLOAD_URL != ''
+        continue-on-error: true
+        working-directory: platform
+        run: |
+          if [ "$DEPLOY_MODE" = "external" ]; then
+            SITE_ROOT="${GITHUB_WORKSPACE}/site"
+          else
+            SITE_ROOT="${GITHUB_WORKSPACE}/platform/apps/sites/${TENANT}"
+          fi
+          pnpm --filter @astropayload/payload auto-import-blog-if-empty -- \
+            --slug "$TENANT" \
+            --site "$SITE_ROOT" \
+            --blog-path "$BLOG_CONTENT_PATH"
+
       - name: Report deploy in progress
         if: env.PAYLOAD_URL != ''
+        continue-on-error: true
         working-directory: platform
         run: |
           pnpm --filter @astropayload/payload report:deploy -- \
@@ -109,7 +125,9 @@ jobs:
       - name: Sync content (monorepo)
         if: env.DEPLOY_MODE != 'external'
         working-directory: platform
-        run: pnpm --filter ${{ steps.monorepo.outputs.filter }} sync:content
+        run: |
+          pnpm --filter ${{ steps.monorepo.outputs.filter }} sync:content
+          echo "::notice ::Sync reads blog-posts FROM Payload CMS. If the live site has no posts, import or create them in Payload first (Publish does not import into CMS)."
 
       - name: Sync content (external)
         if: env.DEPLOY_MODE == 'external'
@@ -118,6 +136,7 @@ jobs:
           SITE_ROOT: ${{ github.workspace }}/site
         run: |
           pnpm tenant-cli sync --slug "$TENANT" --site "$SITE_ROOT" --blog-path "$BLOG_CONTENT_PATH"
+          echo "::notice ::Check log line '[tenant-cli sync] done: { blog: N }'. N=0 means no posts in Payload — check auto-import step (needs PAYLOAD_API_KEY with create access) or import manually."
 
       - name: Install site dependencies (external)
         if: env.DEPLOY_MODE == 'external'
@@ -178,6 +197,7 @@ jobs:
 
       - name: Report deploy success
         if: success() && env.PAYLOAD_URL != ''
+        continue-on-error: true
         working-directory: platform
         run: |
           WORKERS_URL="${{ steps.cf_deploy_mono.outputs.workers_url }}"
@@ -190,6 +210,7 @@ jobs:
 
       - name: Report deploy failure
         if: failure() && env.PAYLOAD_URL != ''
+        continue-on-error: true
         working-directory: platform
         run: |
           pnpm --filter @astropayload/payload report:deploy -- \

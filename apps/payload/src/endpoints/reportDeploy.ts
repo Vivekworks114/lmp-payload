@@ -32,10 +32,12 @@ function json(body: Record<string, unknown>, status = 200): Response {
 
 function isAuthorized(req: PayloadRequest): boolean {
   if (isSuperAdmin(req.user)) return true
-  const expected = process.env.DEPLOY_REPORT_TOKEN
+
+  const expected = process.env.DEPLOY_REPORT_TOKEN?.trim()
   if (!expected) return false
-  const header = req.headers?.get?.('x-deploy-report-token') ?? null
-  return header === expected
+
+  const header = req.headers?.get?.('x-deploy-report-token')?.trim() ?? null
+  return Boolean(header && header === expected)
 }
 
 async function findTenantBySlug(req: PayloadRequest, slug: string) {

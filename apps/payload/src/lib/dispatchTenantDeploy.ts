@@ -132,7 +132,7 @@ export async function dispatchTenantDeploy(
   const targetInfo = getTenantDeployTargetInfo(tenant)
   const targetLabel = targetInfo?.label ?? tenant.slug
 
-  let message = `Publish started for "${tenant.slug}" (${targetLabel}). The live site updates when CI finishes (~2 minutes).`
+  let message = `The live site updates when CI finishes (~2 minutes).`
   if (result.usedLegacyWorkflowInputs) {
     message +=
       ' Note: GitHub is running an older tenant-deploy.yml (monorepo only). Push the latest workflow file to main for external-repo deploys.'

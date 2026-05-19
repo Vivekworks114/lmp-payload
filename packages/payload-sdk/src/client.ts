@@ -109,6 +109,53 @@ export class PayloadClient {
     return all
   }
 
+  /** Total documents for this tenant in a collection (uses `totalDocs` from a minimal page). */
+  async count(collection: string, extraWhere?: Record<string, unknown>): Promise<number> {
+    const tenantId = await this.resolveTenantId()
+    const params = new URLSearchParams()
+    params.set('limit', '1')
+    params.set('depth', '0')
+    const baseWhere: Record<string, unknown> = {
+      ...(extraWhere ?? {}),
+      tenant: { equals: tenantId },
+    }
+    flattenWhere(baseWhere, '', params)
+    const res = await this.request<PayloadFindResult<unknown>>(
+      'GET',
+      `/api/${collection}?${params.toString()}`,
+    )
+    return res.totalDocs
+  }
+
+  async findOne<T>(
+    collection: string,
+    where: Record<string, unknown>,
+    depth = 0,
+  ): Promise<T | null> {
+    const tenantId = await this.resolveTenantId()
+    const params = new URLSearchParams()
+    params.set('limit', '1')
+    params.set('depth', String(depth))
+    const baseWhere: Record<string, unknown> = {
+      ...where,
+      tenant: { equals: tenantId },
+    }
+    flattenWhere(baseWhere, '', params)
+    const res = await this.request<PayloadFindResult<T>>(
+      'GET',
+      `/api/${collection}?${params.toString()}`,
+    )
+    return res.docs[0] ?? null
+  }
+
+  async create<T>(collection: string, data: Record<string, unknown>): Promise<T> {
+    return this.request<T>('POST', `/api/${collection}`, data)
+  }
+
+  async update<T>(collection: string, id: string, data: Record<string, unknown>): Promise<T> {
+    return this.request<T>('PATCH', `/api/${collection}/${encodeURIComponent(id)}`, data)
+  }
+
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.timeoutMs)

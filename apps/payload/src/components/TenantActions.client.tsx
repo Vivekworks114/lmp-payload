@@ -4,6 +4,7 @@ import { useDocumentInfo } from '@payloadcms/ui'
 import { useState } from 'react'
 
 import { DeployTargetBadge } from './DeployTargetBadge.client'
+import { publishResultBox } from './publishPanelStyles'
 import { useTenantDeployTarget } from './useTenantDeployTarget'
 
 type ApiResult = {
@@ -63,8 +64,6 @@ export function TenantActions(): React.ReactElement {
   }
 
   const disabled = !tenantId
-  const publishMode = result?.deployMode ?? target?.mode
-  const publishLabel = result?.deployTarget ?? target?.label
 
   return (
     <div
@@ -137,43 +136,30 @@ export function TenantActions(): React.ReactElement {
       </div>
 
       {result ? (
-        <div
-          style={{
-            marginTop: 12,
-            padding: '10px 12px',
-            borderRadius: 4,
-            background: result.ok
-              ? 'var(--theme-success-50, #dcfce7)'
-              : 'var(--theme-error-50, #fee2e2)',
-            color: result.ok
-              ? 'var(--theme-success-900, #14532d)'
-              : 'var(--theme-error-900, #7f1d1d)',
-            fontSize: 13,
-          }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: 2 }}>
+        <div style={publishResultBox(result.ok)} role="status">
+          <div style={{ fontWeight: 600, marginBottom: result.message ? 4 : 0 }}>
             {result.kind === 'publish'
-              ? 'Publish'
+              ? result.ok
+                ? 'Publish started'
+                : 'Publish failed'
               : result.kind === 'scaffold'
-                ? 'Scaffold'
-                : 'Redeploy'}
-            : {result.ok ? 'started' : 'failed'}
+                ? result.ok
+                  ? 'Scaffold started'
+                  : 'Scaffold failed'
+                : result.ok
+                  ? 'Redeploy started'
+                  : 'Redeploy failed'}
           </div>
-          {result.kind === 'publish' && result.ok && publishMode && publishLabel ? (
-            <div style={{ marginBottom: 6 }}>
-              <DeployTargetBadge mode={publishMode} label={publishLabel} compact />
-            </div>
-          ) : null}
           <div>{result.message}</div>
           {result.runUrl ? (
-            <div style={{ marginTop: 6 }}>
-              <a href={result.runUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
-                Open workflow run on GitHub →
+            <div style={{ marginTop: 8 }}>
+              <a href={result.runUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 500 }}>
+                Track build on GitHub →
               </a>
             </div>
           ) : result.runsUrl ? (
-            <div style={{ marginTop: 6 }}>
-              <a href={result.runsUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
+            <div style={{ marginTop: 8 }}>
+              <a href={result.runsUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 500 }}>
                 View workflow runs on GitHub →
               </a>
             </div>

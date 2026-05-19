@@ -124,6 +124,43 @@ jobs:
           echo "PR not merged within 30 minutes — client workflow or manual validate can mark ready later."
           exit 0
 
+      - name: Setup pnpm (platform)
+        if: steps.pr.outputs.pr_number != ''
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node (platform)
+        if: steps.pr.outputs.pr_number != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Install platform dependencies
+        if: steps.pr.outputs.pr_number != ''
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Seed Payload from repo after setup merge
+        if: steps.pr.outputs.pr_number != ''
+        continue-on-error: true
+        working-directory: platform
+        env:
+          PAYLOAD_URL: ${{ secrets.PAYLOAD_URL }}
+          PAYLOAD_API_KEY: ${{ secrets.PAYLOAD_API_KEY }}
+        run: |
+          MERGED=$(cd ../site && gh pr view "${{ steps.pr.outputs.pr_number }}" --json merged -q .merged)
+          if [ "$MERGED" != "true" ]; then
+            echo "Setup PR not merged yet; skipping blog import."
+            exit 0
+          fi
+          pnpm --filter @astropayload/payload auto-import-blog-if-empty -- \
+            --slug "$TENANT" \
+            --site "${GITHUB_WORKSPACE}/site" \
+            --blog-path "$BLOG_PATH"
+
       - name: Report setup ready (platform poll)
         if: steps.pr.outputs.pr_number != ''
         working-directory: platform

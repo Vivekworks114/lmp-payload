@@ -4,6 +4,11 @@ import { useAuth } from '@payloadcms/ui'
 import { useCallback, useEffect, useState } from 'react'
 
 import { DeployTargetBadge } from './DeployTargetBadge.client'
+import {
+  publishPanelCard,
+  publishPrimaryButton,
+  publishResultBox,
+} from './publishPanelStyles'
 import { useTenantDeployTarget } from './useTenantDeployTarget'
 
 const TENANT_COOKIE = 'payload-tenant'
@@ -12,8 +17,6 @@ type PublishResult = {
   ok: boolean
   message: string
   runUrl?: string | null
-  deployMode?: 'monorepo' | 'external'
-  deployTarget?: string
 }
 
 function readTenantIdFromCookie(): string | undefined {
@@ -23,8 +26,7 @@ function readTenantIdFromCookie(): string | undefined {
 }
 
 /**
- * Shown on content list/edit views. Editors save posts freely; this button
- * pushes all saved CMS content to the live static site (one CI run).
+ * Shown above document controls on content list/edit views.
  */
 export function PublishContentBar(): React.ReactElement | null {
   const { user } = useAuth()
@@ -59,6 +61,8 @@ export function PublishContentBar(): React.ReactElement | null {
 
   if (!user) return null
 
+  const canPublish = Boolean(tenantId) && !busy
+
   async function publish() {
     if (!tenantId) return
     setBusy(true)
@@ -76,11 +80,9 @@ export function PublishContentBar(): React.ReactElement | null {
           typeof body.message === 'string'
             ? body.message
             : res.ok
-              ? 'Publish started.'
+              ? 'The live site updates when CI finishes (~2 minutes).'
               : `Publish failed: ${res.status} ${res.statusText}`,
         runUrl: body.runUrl ?? null,
-        deployMode: body.deployMode,
-        deployTarget: body.deployTarget,
       })
       if (body.ok) refresh()
     } catch (err) {
@@ -93,87 +95,75 @@ export function PublishContentBar(): React.ReactElement | null {
     }
   }
 
-  const displayMode = result?.deployMode ?? target?.mode
-  const displayTarget = result?.deployTarget ?? target?.label
-
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        gap: 12,
-        padding: '12px 16px',
-        marginBottom: 16,
-        borderRadius: 6,
-        border: '1px solid var(--theme-elevation-150, #e5e7eb)',
-        background: 'var(--theme-elevation-50, #f9fafb)',
-      }}
-    >
-      <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 14 }}>Live site</div>
-        <div style={{ fontSize: 13, color: 'var(--theme-elevation-500, #6b7280)', marginTop: 2 }}>
-          {tenantId
-            ? `Saving updates the CMS only. Publish when ready${tenantLabel ? ` (${tenantLabel})` : ''}.`
-            : 'Select a site in the tenant switcher above, then publish your saved changes.'}
-        </div>
-        {tenantId && !loading && target ? (
-          <div style={{ marginTop: 8 }}>
-            <DeployTargetBadge mode={target.mode} label={target.shortLabel} compact />
-          </div>
-        ) : null}
-      </div>
-
-      <button
-        type="button"
-        disabled={!tenantId || busy}
-        onClick={() => void publish()}
+    <section style={publishPanelCard}>
+      <div
         style={{
-          padding: '10px 18px',
-          borderRadius: 4,
-          border: 'none',
-          background: tenantId && !busy ? 'var(--theme-success-500, #16a34a)' : '#9ca3af',
-          color: '#fff',
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: !tenantId || busy ? 'not-allowed' : 'pointer',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 16,
         }}
       >
-        {busy ? 'Publishing…' : 'Publish content to live site'}
-      </button>
+        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: 15,
+              fontWeight: 600,
+              lineHeight: 1.3,
+              color: 'var(--theme-text, #111827)',
+            }}
+          >
+            Live site
+          </h3>
+          <p
+            style={{
+              margin: '6px 0 0',
+              fontSize: 13,
+              lineHeight: 1.45,
+              color: 'var(--theme-elevation-500, #6b7280)',
+            }}
+          >
+            {tenantId
+              ? `Saving updates the CMS only. Publish when ready${tenantLabel ? ` (${tenantLabel})` : ''}.`
+              : 'Select a site in the tenant switcher above, then publish your saved changes.'}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          disabled={!canPublish}
+          onClick={() => void publish()}
+          style={publishPrimaryButton(!canPublish)}
+        >
+          {busy ? 'Publishing…' : 'Publish content to live site'}
+        </button>
+      </div>
+
+      {tenantId && !loading && target ? (
+        <div style={{ marginTop: 14 }}>
+          <DeployTargetBadge mode={target.mode} label={target.label} />
+        </div>
+      ) : null}
 
       {result ? (
-        <div
-          style={{
-            flex: '1 1 100%',
-            fontSize: 13,
-            padding: '8px 10px',
-            borderRadius: 4,
-            background: result.ok
-              ? 'var(--theme-success-50, #dcfce7)'
-              : 'var(--theme-error-50, #fee2e2)',
-            color: result.ok
-              ? 'var(--theme-success-900, #14532d)'
-              : 'var(--theme-error-900, #7f1d1d)',
-          }}
-        >
-          {result.ok && displayMode && displayTarget ? (
-            <div style={{ marginBottom: 6 }}>
-              <DeployTargetBadge mode={displayMode} label={displayTarget} compact />
-            </div>
-          ) : null}
-          {result.message}
+        <div style={publishResultBox(result.ok)} role="status">
+          <div style={{ fontWeight: 600, marginBottom: result.message ? 4 : 0 }}>
+            {result.ok ? 'Publish started' : 'Publish failed'}
+          </div>
+          <div>{result.message}</div>
           {result.runUrl ? (
-            <>
-              {' '}
-              <a href={result.runUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
-                Track build →
+            <div style={{ marginTop: 8 }}>
+              <a href={result.runUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 500 }}>
+                Track build on GitHub →
               </a>
-            </>
+            </div>
           ) : null}
         </div>
       ) : null}
-    </div>
+    </section>
   )
 }
 

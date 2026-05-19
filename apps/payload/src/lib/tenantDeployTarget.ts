@@ -27,8 +27,8 @@ export function getTenantDeployTargetInfo(tenant: {
   if (mode === 'external' && parsed) {
     return {
       mode: 'external',
-      label: `GitHub: ${parsed.full} @ ${branch} → ${blogContentPath}`,
-      shortLabel: `${parsed.full} (${branch})`,
+      label: `${parsed.full} @ ${branch} → ${blogContentPath}`,
+      shortLabel: parsed.full,
       githubRepo: parsed.full,
       githubBranch: branch,
       blogContentPath,
@@ -37,8 +37,8 @@ export function getTenantDeployTargetInfo(tenant: {
 
   return {
     mode: 'monorepo',
-    label: `Monorepo: apps/sites/${tenant.slug}`,
-    shortLabel: `apps/sites/${tenant.slug}`,
+    label: `apps/sites/${tenant.slug}`,
+    shortLabel: tenant.slug,
     githubRepo: null,
     githubBranch: branch,
     blogContentPath,

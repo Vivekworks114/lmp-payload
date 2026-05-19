@@ -346,6 +346,16 @@ export const Tenants: CollectionConfig = {
               },
             },
             {
+              name: 'blogImportedFromRepoAt',
+              type: 'date',
+              admin: {
+                readOnly: true,
+                date: { pickerAppearance: 'dayAndTime' },
+                description:
+                  'When blog markdown was last imported from the connected repo into Payload (also set automatically on first publish if CMS had no posts).',
+              },
+            },
+            {
               type: 'row',
               fields: [
                 {

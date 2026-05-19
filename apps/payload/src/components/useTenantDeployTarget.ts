@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
+import { getTenantDeployTargetInfo } from '../lib/tenantDeployTarget'
 import type { DeployMode } from '../lib/tenantDeployTarget'
 
 export type TenantDeployTargetState = {
@@ -39,25 +40,17 @@ export function useTenantDeployTarget(tenantId: string | null | undefined): {
             setTarget(null)
             return
           }
-          const repo = doc.githubRepo?.trim()
-          const branch = doc.githubBranch?.trim() || 'main'
-          const blogPath = doc.blogContentPath?.trim() || 'src/content/blog'
-          if (repo) {
-            const full = repo.includes('/') ? repo.replace(/^.*github\.com[/:]([^/]+\/[^/]+).*/i, '$1') : repo
-            setTarget({
-              mode: 'external',
-              label: `${full} @ ${branch} → ${blogPath}`,
-              shortLabel: full,
-              githubSetupStatus: doc.githubSetupStatus,
-            })
-          } else {
-            setTarget({
-              mode: 'monorepo',
-              label: `apps/sites/${doc.slug}`,
-              shortLabel: `apps/sites/${doc.slug}`,
-              githubSetupStatus: doc.githubSetupStatus,
-            })
+          const info = getTenantDeployTargetInfo(doc)
+          if (!info) {
+            setTarget(null)
+            return
           }
+          setTarget({
+            mode: info.mode,
+            label: info.label,
+            shortLabel: info.shortLabel,
+            githubSetupStatus: doc.githubSetupStatus,
+          })
         },
       )
       .catch(() => setTarget(null))

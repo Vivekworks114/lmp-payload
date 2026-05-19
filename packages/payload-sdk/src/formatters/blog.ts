@@ -33,8 +33,13 @@ export function formatBlogMarkdown(doc: BlogDoc): FormattedFile {
   }
   if (doc.updatedDate) frontmatter.updatedDate = doc.updatedDate
   if (doc.author) frontmatter.author = doc.author
+  // Astro content schema uses image() — only local asset paths work. Skip remote URLs
+  // (R2/CDN); posts still render without a hero image.
   if (doc.heroImage && typeof doc.heroImage === 'object' && doc.heroImage.url) {
-    frontmatter.heroImage = doc.heroImage.url
+    const url = doc.heroImage.url
+    if (!/^https?:\/\//i.test(url)) {
+      frontmatter.heroImage = url
+    }
   }
   if (doc.categories?.length) {
     frontmatter.categories = doc.categories.map((c) => c.value).filter(Boolean)

@@ -138,11 +138,12 @@ In the repo settings → **Secrets and variables → Actions**, add:
 | `CLOUDFLARE_ACCOUNT_ID` | Found in Cloudflare dashboard right sidebar |
 | `PAYLOAD_URL` | Your CMS URL, e.g. `https://cms.yourcompany.com` |
 | `PAYLOAD_API_KEY` | A dedicated CI user's API key (super-admin; don't reuse your personal one) |
-| `DEPLOY_REPORT_TOKEN` | Optional. Shared secret for `POST /api/tenants/report-deploy` if you prefer not to use the API key in CI |
+| `DEPLOY_REPORT_TOKEN` | **Recommended.** Same value as `DEPLOY_REPORT_TOKEN` in Payload `.env` on the CMS server. CI sends header `x-deploy-report-token`. Without this (and without a valid super-admin `PAYLOAD_API_KEY`), deploy status reports return 401. |
 | `CLOUDFLARE_WORKERS_DEV_SUBDOMAIN` | Optional. Account workers.dev subdomain used to build `https://<slug>.<subdomain>.workers.dev` when wrangler output cannot be parsed |
 | `EXTERNAL_REPO_GITHUB_TOKEN` | **Required for external client repos.** Fine-grained or classic PAT with **read** access to each client repo (e.g. `zbseollp/keukenfaqs`). The built-in `GITHUB_TOKEN` only sees the astropayload repo — checkout of other repos fails with "Repository not found". Can be the same PAT as Payload `GITHUB_TOKEN` if scoped to those repos. |
+| `PAYLOAD_API_KEY` | Also used for **auto-import on first publish** (CI posts blog rows via REST API — database credentials stay on the Payload server only). |
 
-These get injected into `tenant-deploy.yml`, `tenant-scaffold.yml`, and `tenant-repo-setup.yml` at runtime.
+These get injected into `tenant-deploy.yml`, `tenant-scaffold.yml`, and `tenant-repo-setup.yml` at runtime. **Do not** add `DATABASE_URI` or `PAYLOAD_SECRET` to GitHub — CI never connects to Postgres directly.
 
 **External client repos** (tenant has `githubRepo` set): the PAT above must be able to **read** the client repo and open setup PRs. After the setup PR merges, either the platform workflow polls for merge (30 min) or the client repo workflow notifies Payload — add on the **client** repo:
 
@@ -165,6 +166,57 @@ openssl rand -hex 32
 # Payload admin (Users → Add User) and enabling the API Key on that user,
 # instead of giving CI access to your personal admin account.
 ```
+
+---
+
+## 1.8 Self-hosted Payload on a VPS (PM2)
+
+Typical path: clone to `/var/www/astropayload`, configure `apps/payload/.env`, run Payload behind nginx on port 3000.
+
+### One-time on the server
+
+```sh
+# Node 22+ and pnpm (example on Ubuntu)
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs git
+npm install -g pnpm pm2
+
+cd /var/www
+git clone https://github.com/YOUR_ORG/astropayload.git
+cd astropayload
+cp apps/payload/.env.example apps/payload/.env
+# Edit .env: DATABASE_URI, PAYLOAD_SECRET, PAYLOAD_PUBLIC_SERVER_URL, R2_*, GITHUB_*, etc.
+
+sudo mkdir -p /var/log/payload
+sudo chown "$USER:$USER" /var/log/payload
+
+chmod +x scripts/vps-deploy-payload.sh
+./scripts/vps-deploy-payload.sh --first-run
+pm2 startup   # run the command it prints, then: pm2 save
+```
+
+### Every deploy (pull + build + restart)
+
+```sh
+cd /var/www/astropayload
+./scripts/vps-deploy-payload.sh
+```
+
+After changing `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` or other build-time env:
+
+```sh
+./scripts/vps-deploy-payload.sh --fresh
+```
+
+Useful commands:
+
+```sh
+pm2 status
+pm2 logs payload --lines 200
+pm2 reload payload
+```
+
+Process config: `ecosystem.config.cjs` at repo root. **Tenant sites** still deploy via GitHub Actions (Publish in admin), not via this VPS script.
 
 ---
 

@@ -88,8 +88,9 @@ async function main(): Promise<void> {
   }
 
   const headers: Record<string, string> = { 'content-type': 'application/json' }
-  if (apiKey) headers.Authorization = `users API-Key ${apiKey}`
+  // Prefer shared token (CI); API key requires Users.useAPIKey + super-admin role.
   if (reportToken) headers['x-deploy-report-token'] = reportToken
+  else if (apiKey) headers.Authorization = `users API-Key ${apiKey}`
 
   const res = await fetch(`${baseUrl}${path}`, {
     method: 'POST',
@@ -100,6 +101,13 @@ async function main(): Promise<void> {
   const text = await res.text()
   if (!res.ok) {
     console.error(`Report failed (${res.status}): ${text}`)
+    if (res.status === 401) {
+      console.error(
+        'Fix: set matching DEPLOY_REPORT_TOKEN in Payload .env AND GitHub Actions secrets, ' +
+          'or PAYLOAD_API_KEY from a super-admin user (Users → Enable API Key). ' +
+          `PAYLOAD_URL=${baseUrl} auth=${reportToken ? 'token' : apiKey ? 'api-key' : 'none'}`,
+      )
+    }
     process.exit(1)
   }
 
