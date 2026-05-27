@@ -25,3 +25,7 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS api_key_index varchar;
 
 CREATE INDEX IF NOT EXISTS users_api_key_index_idx ON users (api_key_index);
+
+-- Users: TOTP 2FA (payload-totp plugin)
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS totp_secret varchar;
