@@ -39,6 +39,13 @@ export default buildConfig({
     meta: {
       titleSuffix: ' — astropayload',
     },
+    components: {
+      providers: [
+        {
+          path: '@/components/TotpHardRedirect.client#TotpHardRedirect',
+        },
+      ],
+    },
   },
 
   collections: [Tenants, Users, BlogPosts, Media],

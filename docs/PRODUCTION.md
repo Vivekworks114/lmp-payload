@@ -556,6 +556,7 @@ All admin users (Super Admin, Tenant Admin, and Editor) must set up TOTP 2FA bef
 - Public content reads (`tenants`, `blog-posts`, `media`) remain unauthenticated for build-time fetches.
 - **After first deploy with 2FA**, run `psql "$DATABASE_URI" -f apps/payload/scripts/sync-prod-schema.sql` on the VPS (adds `users.totp_secret`). Without this column, admin login returns `column users.totp_secret does not exist`.
 - **`PAYLOAD_PUBLIC_SERVER_URL`** must match the browser URL (e.g. `https://payload.10beste.com`). Wrong values break server-side redirects to `/admin/setup-totp`.
+- If login succeeds but the UI stays on the login form until refresh, redeploy with `TotpHardRedirect` (full-page navigation to setup/verify) and ensure `users` has `totp.disableAccessWrapper.read` so `/api/users/me` is not 403 on the verify page.
 
 ### Secrets handling
 
