@@ -52,6 +52,16 @@ function allowedOriginsFor(req: NextRequest): Set<string> {
   return set
 }
 
+/** Required by payload-totp to avoid redirect loops on the setup/verify pages. */
+function nextWithPathname(
+  req: NextRequest,
+  init?: { request?: { headers: Headers } },
+): NextResponse {
+  const response = init ? NextResponse.next(init) : NextResponse.next()
+  response.headers.set('x-pathname', req.nextUrl.pathname)
+  return response
+}
+
 export function middleware(req: NextRequest): NextResponse {
   const allowed = allowedOriginsFor(req)
 
@@ -71,7 +81,7 @@ export function middleware(req: NextRequest): NextResponse {
     })
   }
 
-  if (origin && allowed.has(origin)) return NextResponse.next()
+  if (origin && allowed.has(origin)) return nextWithPathname(req)
 
   let synthOrigin: string | null = null
 
@@ -104,7 +114,7 @@ export function middleware(req: NextRequest): NextResponse {
         referer: req.headers.get('referer'),
       })
     }
-    return NextResponse.next()
+    return nextWithPathname(req)
   }
 
   if (isMutatingApi && isPayloadApiDebug()) {
@@ -118,7 +128,7 @@ export function middleware(req: NextRequest): NextResponse {
   const forwardedHeaders = new Headers(req.headers)
   forwardedHeaders.set('origin', synthOrigin)
 
-  return NextResponse.next({ request: { headers: forwardedHeaders } })
+  return nextWithPathname(req, { request: { headers: forwardedHeaders } })
 }
 
 /**

@@ -546,6 +546,15 @@ For destructive changes (rename a field, drop a collection):
 
 ## 7. Security checklist
 
+### Admin two-factor authentication (2FA)
+
+All admin users (Super Admin, Tenant Admin, and Editor) must set up TOTP 2FA before using the Payload admin panel. After the first password login, users are redirected to scan a QR code with an authenticator app (Google Authenticator, Authy, 1Password, etc.). Subsequent logins require email, password, and a 6-digit code.
+
+- Implemented via [`payload-totp`](https://github.com/GeorgeHulpoi/payload-totp) on the `users` collection (`forceSetup: true`).
+- Optional env: `PAYLOAD_TOTP_ISSUER` — label shown in authenticator apps (default `astropayload`).
+- **API keys are unaffected** — CI and Astro builds continue to authenticate with `Authorization: users API-Key …` without TOTP.
+- Public content reads (`tenants`, `blog-posts`, `media`) remain unauthenticated for build-time fetches.
+
 ### Secrets handling
 
 | Secret | Where it lives | Rotation cadence |

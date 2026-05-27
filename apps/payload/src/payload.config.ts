@@ -6,6 +6,7 @@ import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { buildConfig } from 'payload'
+import { payloadTotp } from 'payload-totp'
 import sharp from 'sharp'
 
 import { Tenants } from './collections/Tenants'
@@ -113,5 +114,14 @@ export default buildConfig({
           }),
         ]
       : []),
+
+    // Must stay last — wraps access controls for TOTP verification on admin login.
+    payloadTotp({
+      collection: 'users',
+      forceSetup: true,
+      totp: {
+        issuer: process.env.PAYLOAD_TOTP_ISSUER || 'astropayload',
+      },
+    }),
   ],
 })

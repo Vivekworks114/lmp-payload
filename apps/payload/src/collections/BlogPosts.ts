@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { authenticatedRead, publicRead } from '../access/tenantAccess'
+import { totpPublicReadCustom } from '../access/totpPublicRead'
 import { contentPublishComponents, seoFields, slugField } from './_shared'
 
 /**
@@ -9,6 +10,7 @@ import { contentPublishComponents, seoFields, slugField } from './_shared'
  */
 export const BlogPosts: CollectionConfig = {
   slug: 'blog-posts',
+  custom: totpPublicReadCustom,
   labels: { singular: 'Blog Post', plural: 'Blog Posts' },
   admin: {
     useAsTitle: 'title',
