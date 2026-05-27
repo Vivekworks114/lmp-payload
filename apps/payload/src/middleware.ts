@@ -52,14 +52,15 @@ function allowedOriginsFor(req: NextRequest): Set<string> {
   return set
 }
 
-/** Required by payload-totp to avoid redirect loops on the setup/verify pages. */
-function nextWithPathname(
-  req: NextRequest,
-  init?: { request?: { headers: Headers } },
-): NextResponse {
-  const response = init ? NextResponse.next(init) : NextResponse.next()
-  response.headers.set('x-pathname', req.nextUrl.pathname)
-  return response
+/**
+ * payload-totp reads `x-pathname` via `headers()` in server components — that
+ * only sees **request** headers. Setting it on the response alone makes every
+ * admin route look like `/`, which breaks redirects to /admin/setup-totp.
+ */
+function nextWithPathname(req: NextRequest, requestHeaders?: Headers): NextResponse {
+  const headers = requestHeaders ?? new Headers(req.headers)
+  headers.set('x-pathname', req.nextUrl.pathname)
+  return NextResponse.next({ request: { headers } })
 }
 
 export function middleware(req: NextRequest): NextResponse {
@@ -128,7 +129,7 @@ export function middleware(req: NextRequest): NextResponse {
   const forwardedHeaders = new Headers(req.headers)
   forwardedHeaders.set('origin', synthOrigin)
 
-  return nextWithPathname(req, { request: { headers: forwardedHeaders } })
+  return nextWithPathname(req, forwardedHeaders)
 }
 
 /**

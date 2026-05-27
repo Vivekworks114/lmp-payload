@@ -555,6 +555,7 @@ All admin users (Super Admin, Tenant Admin, and Editor) must set up TOTP 2FA bef
 - **API keys are unaffected** — CI and Astro builds continue to authenticate with `Authorization: users API-Key …` without TOTP.
 - Public content reads (`tenants`, `blog-posts`, `media`) remain unauthenticated for build-time fetches.
 - **After first deploy with 2FA**, run `psql "$DATABASE_URI" -f apps/payload/scripts/sync-prod-schema.sql` on the VPS (adds `users.totp_secret`). Without this column, admin login returns `column users.totp_secret does not exist`.
+- **`PAYLOAD_PUBLIC_SERVER_URL`** must match the browser URL (e.g. `https://payload.10beste.com`). Wrong values break server-side redirects to `/admin/setup-totp`.
 
 ### Secrets handling
 
