@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { sanitizeBlogSlug } from '@astropayload/payload-sdk/formatters'
 
 import { authenticatedRead, publicRead } from '../access/tenantAccess'
 import { totpPublicReadCustom } from '../access/totpPublicRead'
@@ -23,6 +24,15 @@ export const BlogPosts: CollectionConfig = {
     create: authenticatedRead,
     update: authenticatedRead,
     delete: authenticatedRead,
+  },
+  hooks: {
+    beforeValidate: [
+      ({ data }) => {
+        if (data && typeof data.slug === 'string' && data.slug.trim()) {
+          data.slug = sanitizeBlogSlug(data.slug)
+        }
+      },
+    ],
   },
   fields: [
     { name: 'title', type: 'text', required: true },

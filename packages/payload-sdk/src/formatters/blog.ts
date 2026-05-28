@@ -1,8 +1,11 @@
 import { lexicalToMarkdown } from '../lexical'
 
+import { sanitizeBlogSlug } from './sanitizeBlogSlug'
+
 /**
- * Mirrors keukenfaqs-main src/content.config.ts `blog` Zod schema:
- *   title, description, pubDate, updatedDate?, heroImage?, categories?, tags?, author?
+ * Frontmatter for Astro blog collections. Supports:
+ *   - keukenfaqs-style: pubDate, title, description
+ *   - WP / external repos: slug, date (required on some sites)
  */
 
 interface BlogDoc {
@@ -54,16 +57,20 @@ export function formatBlogMarkdown(
   }
   if (doc.extra && typeof doc.extra === 'object') {
     for (const [k, v] of Object.entries(doc.extra)) {
-      if (v !== undefined && v !== null && !(k in frontmatter)) {
-        frontmatter[k] = v
-      }
+      if (v !== undefined && v !== null) frontmatter[k] = v
     }
+  }
+
+  const slug = sanitizeBlogSlug(String(frontmatter.slug ?? doc.slug ?? doc.title))
+  frontmatter.slug = slug
+  if (frontmatter.date == null || frontmatter.date === '') {
+    frontmatter.date = frontmatter.pubDate ?? doc.pubDate
   }
 
   const yaml = toYaml(frontmatter)
   const md = lexicalToMarkdown(doc.content)
   return {
-    filename: `${doc.slug}.${extension}`,
+    filename: `${slug}.${extension}`,
     body: `---\n${yaml}---\n\n${md}`,
   }
 }

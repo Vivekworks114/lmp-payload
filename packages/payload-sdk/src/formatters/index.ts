@@ -1,4 +1,5 @@
 export { formatBlogMarkdown, type BlogFileExtension, type FormattedFile } from './blog'
+export { sanitizeBlogSlug } from './sanitizeBlogSlug'
 export { formatPageMarkdown } from './page'
 export {
   formatTop10Json,
