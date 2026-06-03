@@ -26,7 +26,7 @@ export const slugField = (description?: string): Field => ({
   type: 'text',
   required: true,
   index: true,
-  admin: { description: description ?? 'URL slug. Lowercase, hyphens only.' },
+  admin: { description: description ?? 'URL slug. Auto-normalized: lowercase, hyphens, no special characters.' },
 })
 
 /** Publish bar on list + edit views (manual publish — no auto-deploy on save). */

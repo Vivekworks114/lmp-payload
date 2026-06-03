@@ -1,6 +1,6 @@
 import { lexicalToMarkdown } from '../lexical'
 
-import { sanitizeBlogSlug } from './sanitizeBlogSlug'
+import { resolveBlogSlug, sanitizeBlogSlug } from './sanitizeBlogSlug'
 import { sanitizeMarkdownForAstro } from './sanitizeMarkdownForAstro'
 
 /**
@@ -31,6 +31,20 @@ export interface FormattedFile {
 
 export type BlogFileExtension = 'md' | 'mdx'
 
+/** Frontmatter keys owned by Payload — never overridden by `extra` on export. */
+const RESERVED_FRONTMATTER_KEYS = new Set([
+  'title',
+  'description',
+  'pubDate',
+  'updatedDate',
+  'author',
+  'heroImage',
+  'categories',
+  'tags',
+  'slug',
+  'date',
+])
+
 export function formatBlogMarkdown(
   doc: BlogDoc,
   extension: BlogFileExtension = 'md',
@@ -58,11 +72,12 @@ export function formatBlogMarkdown(
   }
   if (doc.extra && typeof doc.extra === 'object') {
     for (const [k, v] of Object.entries(doc.extra)) {
-      if (v !== undefined && v !== null) frontmatter[k] = v
+      if (v === undefined || v === null || RESERVED_FRONTMATTER_KEYS.has(k)) continue
+      frontmatter[k] = v
     }
   }
 
-  const slug = sanitizeBlogSlug(String(frontmatter.slug ?? doc.slug ?? doc.title))
+  const slug = resolveBlogSlug(doc.slug, doc.title, doc.id)
   frontmatter.slug = slug
   if (frontmatter.date == null || frontmatter.date === '') {
     frontmatter.date = frontmatter.pubDate ?? doc.pubDate

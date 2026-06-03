@@ -2,7 +2,7 @@
  * Shared helpers for blog content files (.md and .mdx) in Astro repos.
  */
 
-import { sanitizeMarkdownForAstro } from '@astropayload/payload-sdk/formatters'
+import { resolveBlogSlug, sanitizeBlogSlug, sanitizeMarkdownForAstro } from '@astropayload/payload-sdk/formatters'
 
 import { markdownToLexicalState } from './markdownToLexical'
 
@@ -19,6 +19,8 @@ const KNOWN_KEYS = new Set([
   'heroImage',
   'categories',
   'tags',
+  'slug',
+  'date',
 ])
 
 export function normalizeBlogFileExtension(value?: string | null): BlogFileExtension {
@@ -115,10 +117,15 @@ export function blogPostDataFromFile(
     : []
   const tags = Array.isArray(known.tags) ? (known.tags as string[]).map((value) => ({ value })) : []
 
+  const fileSlug = sanitizeBlogSlug(slug)
+  const postSlug = known.slug
+    ? sanitizeBlogSlug(String(known.slug))
+    : fileSlug
+
   return {
     tenant: tenantId,
     title,
-    slug,
+    slug: postSlug,
     description,
     pubDate,
     updatedDate: known.updatedDate ? new Date(String(known.updatedDate)).toISOString() : undefined,

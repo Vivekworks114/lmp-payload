@@ -27,8 +27,20 @@ export const BlogPosts: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [
-      ({ data }) => {
-        if (data && typeof data.slug === 'string' && data.slug.trim()) {
+      ({ data, operation }) => {
+        if (!data) return
+
+        if (operation === 'create') {
+          const title = typeof data.title === 'string' ? data.title.trim() : ''
+          const slugRaw =
+            typeof data.slug === 'string' && data.slug.trim() ? data.slug : title
+          if (slugRaw) data.slug = sanitizeBlogSlug(slugRaw)
+          return
+        }
+
+        // Update: only normalize slug when the editor changed it — content-only saves
+        // keep the existing URL stable.
+        if (typeof data.slug === 'string' && data.slug.trim()) {
           data.slug = sanitizeBlogSlug(data.slug)
         }
       },
