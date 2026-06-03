@@ -104,6 +104,8 @@ export default buildConfig({
     process.env.R2_SECRET_ACCESS_KEY
       ? [
           s3Storage({
+            // Keep prefix in schema even when R2 env vars differ between environments.
+            alwaysInsertFields: true,
             collections: {
               media: {
                 prefix: 'tenants',

@@ -62,6 +62,15 @@ export const Media: CollectionConfig = {
       name: 'caption',
       type: 'text',
     },
+    // Required for @payloadcms/storage-s3 per-tenant keys (set in setTenantPrefix).
+    {
+      name: 'prefix',
+      type: 'text',
+      admin: {
+        hidden: true,
+        readOnly: true,
+      },
+    },
     // tenant rel injected by the multi-tenant plugin.
   ],
 }

@@ -69,7 +69,7 @@ export function formatBlogMarkdown(
   }
 
   const yaml = toYaml(frontmatter)
-  const md = sanitizeMarkdownForAstro(lexicalToMarkdown(doc.content))
+  const md = sanitizeMarkdownForAstro(lexicalToMarkdown(doc.content), { title: doc.title })
   return {
     filename: `${slug}.${extension}`,
     body: `---\n${yaml}---\n\n${md}`,

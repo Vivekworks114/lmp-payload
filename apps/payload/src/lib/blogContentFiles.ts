@@ -102,10 +102,10 @@ export function blogPostDataFromFile(
   tenantId: string | number,
 ): Record<string, unknown> {
   const { data, body: rawBody } = parseFrontmatter(raw)
-  const body = sanitizeMarkdownForAstro(rawBody)
   const { known, extra } = splitKnown(data)
   const title = String(known.title ?? slug)
   const description = String(known.description ?? title).slice(0, 500)
+  const body = sanitizeMarkdownForAstro(rawBody, { title })
   const pubDate = known.pubDate
     ? new Date(String(known.pubDate)).toISOString()
     : new Date().toISOString()

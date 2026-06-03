@@ -29,3 +29,7 @@ CREATE INDEX IF NOT EXISTS users_api_key_index_idx ON users (api_key_index);
 -- Users: TOTP 2FA (payload-totp plugin)
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS totp_secret varchar;
+
+-- Media: per-tenant R2 key prefix (set by Media beforeOperation hook + storage-s3)
+ALTER TABLE media
+  ADD COLUMN IF NOT EXISTS prefix varchar;
