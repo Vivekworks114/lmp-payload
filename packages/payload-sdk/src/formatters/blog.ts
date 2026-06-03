@@ -1,6 +1,7 @@
 import { lexicalToMarkdown } from '../lexical'
 
 import { sanitizeBlogSlug } from './sanitizeBlogSlug'
+import { sanitizeMarkdownForAstro } from './sanitizeMarkdownForAstro'
 
 /**
  * Frontmatter for Astro blog collections. Supports:
@@ -68,7 +69,7 @@ export function formatBlogMarkdown(
   }
 
   const yaml = toYaml(frontmatter)
-  const md = lexicalToMarkdown(doc.content)
+  const md = sanitizeMarkdownForAstro(lexicalToMarkdown(doc.content))
   return {
     filename: `${slug}.${extension}`,
     body: `---\n${yaml}---\n\n${md}`,

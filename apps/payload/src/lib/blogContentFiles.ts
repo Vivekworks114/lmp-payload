@@ -2,6 +2,8 @@
  * Shared helpers for blog content files (.md and .mdx) in Astro repos.
  */
 
+import { sanitizeMarkdownForAstro } from '@astropayload/payload-sdk/formatters'
+
 import { markdownToLexicalState } from './markdownToLexical'
 
 export type BlogFileExtension = 'md' | 'mdx'
@@ -99,7 +101,8 @@ export function blogPostDataFromFile(
   slug: string,
   tenantId: string | number,
 ): Record<string, unknown> {
-  const { data, body } = parseFrontmatter(raw)
+  const { data, body: rawBody } = parseFrontmatter(raw)
+  const body = sanitizeMarkdownForAstro(rawBody)
   const { known, extra } = splitKnown(data)
   const title = String(known.title ?? slug)
   const description = String(known.description ?? title).slice(0, 500)
