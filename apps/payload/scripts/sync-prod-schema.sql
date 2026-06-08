@@ -61,3 +61,38 @@ BEGIN
       FOREIGN KEY (github_credential_id) REFERENCES github_credentials (id) ON DELETE SET NULL;
   END IF;
 END $$;
+
+-- Payload document locking / preferences need a rel column per collection.
+ALTER TABLE payload_locked_documents_rels
+  ADD COLUMN IF NOT EXISTS github_credentials_id integer;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'payload_locked_documents_rels_github_credentials_fk'
+  ) THEN
+    ALTER TABLE payload_locked_documents_rels
+      ADD CONSTRAINT payload_locked_documents_rels_github_credentials_fk
+      FOREIGN KEY (github_credentials_id) REFERENCES github_credentials (id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS payload_locked_documents_rels_github_credentials_id_idx
+  ON payload_locked_documents_rels (github_credentials_id);
+
+ALTER TABLE IF EXISTS payload_preferences_rels
+  ADD COLUMN IF NOT EXISTS github_credentials_id integer;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'payload_preferences_rels_github_credentials_fk'
+  ) THEN
+    ALTER TABLE payload_preferences_rels
+      ADD CONSTRAINT payload_preferences_rels_github_credentials_fk
+      FOREIGN KEY (github_credentials_id) REFERENCES github_credentials (id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS payload_preferences_rels_github_credentials_id_idx
+  ON payload_preferences_rels (github_credentials_id);
