@@ -1,10 +1,12 @@
 import type { CollectionConfig } from 'payload'
 
 import { isSuperAdmin } from '../access/isSuperAdmin'
+import { clearGithubCredentialTokenEndpoint } from '../endpoints/githubCredentialActions'
 import { encryptSecret } from '../lib/credentialEncryption'
 
 export const GithubCredentials: CollectionConfig = {
   slug: 'github-credentials',
+  endpoints: [clearGithubCredentialTokenEndpoint],
   labels: { singular: 'GitHub credential', plural: 'GitHub credentials' },
   admin: {
     useAsTitle: 'label',
@@ -21,6 +23,19 @@ export const GithubCredentials: CollectionConfig = {
     delete: ({ req }) => isSuperAdmin(req.user),
   },
   hooks: {
+    beforeValidate: [
+      ({ data, operation }) => {
+        if (!data || typeof data !== 'object') return data
+        const row = data as Record<string, unknown>
+        const token = typeof row.token === 'string' ? row.token.trim() : ''
+        const hasEncrypted =
+          typeof row.tokenEncrypted === 'string' && row.tokenEncrypted.length > 0
+        if (operation === 'create' && !token && !hasEncrypted) {
+          throw new Error('GitHub PAT is required. Paste a token in the Token field and save.')
+        }
+        return data
+      },
+    ],
     beforeChange: [
       ({ data }) => {
         if (!data || typeof data !== 'object') return data
@@ -50,13 +65,22 @@ export const GithubCredentials: CollectionConfig = {
         description: 'Optional GitHub user or org (for your notes).',
       },
     },
+    // Virtual — encrypted into tokenEncrypted on save; default UI is disabled so we hide it.
     {
       name: 'token',
       type: 'text',
       virtual: true,
       admin: {
-        description:
-          'Personal access token (write-only, not stored). Leave blank when editing to keep the existing token.',
+        hidden: true,
+      },
+    },
+    {
+      name: 'tokenPanel',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '/components/GithubCredentialTokenField.client#GithubCredentialTokenPanel',
+        },
       },
     },
     {

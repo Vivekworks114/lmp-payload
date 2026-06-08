@@ -289,6 +289,16 @@ export const Tenants: CollectionConfig = {
               },
             },
             {
+              name: 'githubCredentialActions',
+              type: 'ui',
+              admin: {
+                components: {
+                  Field:
+                    '/components/TenantGithubCredentialActions.client#TenantGithubCredentialActions',
+                },
+              },
+            },
+            {
               name: 'enabledModules',
               type: 'select',
               hasMany: true,
