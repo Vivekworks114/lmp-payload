@@ -329,7 +329,7 @@ export interface GithubCredential {
    */
   githubOwner?: string | null;
   /**
-   * Personal access token (write-only). Leave blank when editing to keep the existing token.
+   * Personal access token (write-only, not stored). Leave blank when editing to keep the existing token.
    */
   token?: string | null;
   /**

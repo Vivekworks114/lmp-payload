@@ -30,7 +30,6 @@ export const GithubCredentials: CollectionConfig = {
           row.tokenEncrypted = encryptSecret(token)
           row.tokenLast4 = token.length >= 4 ? token.slice(-4) : token
         }
-        delete row.token
         return row
       },
     ],
@@ -54,9 +53,10 @@ export const GithubCredentials: CollectionConfig = {
     {
       name: 'token',
       type: 'text',
+      virtual: true,
       admin: {
         description:
-          'Personal access token (write-only). Leave blank when editing to keep the existing token.',
+          'Personal access token (write-only, not stored). Leave blank when editing to keep the existing token.',
       },
     },
     {
