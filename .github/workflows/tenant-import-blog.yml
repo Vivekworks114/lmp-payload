@@ -43,7 +43,7 @@ jobs:
           GH_FALLBACK_TOKEN: ${{ secrets.EXTERNAL_REPO_GITHUB_TOKEN || github.token }}
         run: |
           chmod +x .github/scripts/resolve-client-github-token.sh
-          .github/scripts/resolve-client-github-token.sh >> "$GITHUB_ENV"
+          .github/scripts/resolve-client-github-token.sh
 
       - name: Checkout client repo
         uses: actions/checkout@v4

@@ -19,11 +19,22 @@ if [ -z "$TOKEN" ] && [ -n "${GH_FALLBACK_TOKEN:-}" ]; then
   TOKEN="$GH_FALLBACK_TOKEN"
 fi
 
+set_github_env() {
+  local key="$1"
+  local value="$2"
+  if [ -n "${GITHUB_ENV:-}" ]; then
+    printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+  else
+    printf '%s=%s\n' "$key" "$value"
+  fi
+}
+
 if [ -z "$TOKEN" ]; then
-  echo "CLIENT_GITHUB_TOKEN="
-  echo "::warning ::No client GitHub token resolved; checkout may fail for private external repos."
+  set_github_env "CLIENT_GITHUB_TOKEN" ""
+  echo "::warning::No client GitHub token resolved; checkout may fail for private external repos."
   exit 0
 fi
 
+# Workflow commands must go to step stdout — never append these to GITHUB_ENV.
 echo "::add-mask::${TOKEN}"
-echo "CLIENT_GITHUB_TOKEN=${TOKEN}"
+set_github_env "CLIENT_GITHUB_TOKEN" "$TOKEN"
