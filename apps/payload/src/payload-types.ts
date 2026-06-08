@@ -71,6 +71,7 @@ export interface Config {
     users: User;
     'blog-posts': BlogPost;
     media: Media;
+    'github-credentials': GithubCredential;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -82,6 +83,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     'blog-posts': BlogPostsSelect<false> | BlogPostsSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'github-credentials': GithubCredentialsSelect<false> | GithubCredentialsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -185,15 +187,19 @@ export interface Tenant {
    */
   githubBranch?: string | null;
   /**
+   * Optional PAT for this client repo (encrypted). When empty, CI uses EXTERNAL_REPO_GITHUB_TOKEN / GITHUB_TOKEN (legacy).
+   */
+  githubCredential?: (number | null) | GithubCredential;
+  /**
    * CMS modules synced on publish. Only blog is supported today.
    */
   enabledModules?: 'blog'[] | null;
   /**
-   * Path inside the Astro repo where blog markdown is written on publish.
+   * Path inside the Astro repo where blog files are written on publish (e.g. content/blog or src/content/blog).
    */
   blogContentPath?: string | null;
   /**
-   * File extension for blog posts synced from Payload on publish.
+   * File extension for blog posts synced from Payload on publish. Match your Astro content collection (e.g. MDX sites use .mdx). Import accepts both .md and .mdx.
    */
   blogFileExtension?: ('md' | 'mdx') | null;
   githubSetupStatus?: ('not_connected' | 'validated' | 'setup_dispatched' | 'ready' | 'failed') | null;
@@ -218,7 +224,7 @@ export interface Tenant {
    */
   lastPublishedAt?: string | null;
   /**
-   * When blog markdown was last imported from the connected repo into Payload.
+   * When blog markdown was last imported from the connected repo into Payload (also set automatically on first publish if CMS had no posts).
    */
   blogImportedFromRepoAt?: string | null;
   /**
@@ -259,6 +265,7 @@ export interface Media {
   tenant?: (number | null) | Tenant;
   alt?: string | null;
   caption?: string | null;
+  prefix?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -306,6 +313,40 @@ export interface Media {
   };
 }
 /**
+ * Encrypted GitHub PATs for external client repositories. Tenants without a credential use platform tokens (EXTERNAL_REPO_GITHUB_TOKEN / GITHUB_TOKEN).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "github-credentials".
+ */
+export interface GithubCredential {
+  id: number;
+  /**
+   * e.g. "zbseollp production" — shown when linking a tenant.
+   */
+  label: string;
+  /**
+   * Optional GitHub user or org (for your notes).
+   */
+  githubOwner?: string | null;
+  /**
+   * Personal access token (write-only). Leave blank when editing to keep the existing token.
+   */
+  token?: string | null;
+  /**
+   * Last four characters of the stored token.
+   */
+  tokenLast4?: string | null;
+  tokenEncrypted?: string | null;
+  /**
+   * Scopes, expiry, rotation notes.
+   */
+  notes?: string | null;
+  lastValidatedAt?: string | null;
+  lastValidationError?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
@@ -322,8 +363,13 @@ export interface User {
         id?: string | null;
       }[]
     | null;
+  totpSecret?: string | null;
+  hasTotp?: boolean | null;
   updatedAt: string;
   createdAt: string;
+  enableAPIKey?: boolean | null;
+  apiKey?: string | null;
+  apiKeyIndex?: string | null;
   email: string;
   resetPasswordToken?: string | null;
   resetPasswordExpiration?: string | null;
@@ -350,7 +396,7 @@ export interface BlogPost {
   tenant?: (number | null) | Tenant;
   title: string;
   /**
-   * URL slug. Lowercase, hyphens only.
+   * URL slug. Auto-normalized: lowercase, hyphens, no special characters.
    */
   slug: string;
   description: string;
@@ -455,6 +501,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'github-credentials';
+        value: number | GithubCredential;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -539,6 +589,7 @@ export interface TenantsSelect<T extends boolean = true> {
       };
   githubRepo?: T;
   githubBranch?: T;
+  githubCredential?: T;
   enabledModules?: T;
   blogContentPath?: T;
   blogFileExtension?: T;
@@ -576,8 +627,13 @@ export interface UsersSelect<T extends boolean = true> {
         tenant?: T;
         id?: T;
       };
+  totpSecret?: T;
+  hasTotp?: T;
   updatedAt?: T;
   createdAt?: T;
+  enableAPIKey?: T;
+  apiKey?: T;
+  apiKeyIndex?: T;
   email?: T;
   resetPasswordToken?: T;
   resetPasswordExpiration?: T;
@@ -640,6 +696,7 @@ export interface MediaSelect<T extends boolean = true> {
   tenant?: T;
   alt?: T;
   caption?: T;
+  prefix?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -695,6 +752,22 @@ export interface MediaSelect<T extends boolean = true> {
               filename?: T;
             };
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "github-credentials_select".
+ */
+export interface GithubCredentialsSelect<T extends boolean = true> {
+  label?: T;
+  githubOwner?: T;
+  token?: T;
+  tokenLast4?: T;
+  tokenEncrypted?: T;
+  notes?: T;
+  lastValidatedAt?: T;
+  lastValidationError?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

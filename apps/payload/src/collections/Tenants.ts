@@ -280,6 +280,15 @@ export const Tenants: CollectionConfig = {
               admin: { description: 'Branch to checkout for build and setup.' },
             },
             {
+              name: 'githubCredential',
+              type: 'relationship',
+              relationTo: 'github-credentials',
+              admin: {
+                description:
+                  'Optional PAT for this client repo (encrypted). When empty, CI uses EXTERNAL_REPO_GITHUB_TOKEN / GITHUB_TOKEN (legacy).',
+              },
+            },
+            {
               name: 'enabledModules',
               type: 'select',
               hasMany: true,

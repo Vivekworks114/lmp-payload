@@ -36,12 +36,21 @@ jobs:
         with:
           path: platform
 
+      - name: Resolve client repo GitHub token
+        working-directory: platform
+        env:
+          DEPLOY_REPORT_TOKEN: ${{ secrets.DEPLOY_REPORT_TOKEN }}
+          GH_FALLBACK_TOKEN: ${{ secrets.EXTERNAL_REPO_GITHUB_TOKEN || github.token }}
+        run: |
+          chmod +x .github/scripts/resolve-client-github-token.sh
+          .github/scripts/resolve-client-github-token.sh >> "$GITHUB_ENV"
+
       - name: Checkout client repo
         uses: actions/checkout@v4
         with:
           repository: ${{ env.GITHUB_REPO }}
           ref: ${{ env.GITHUB_BRANCH }}
-          token: ${{ secrets.EXTERNAL_REPO_GITHUB_TOKEN || github.token }}
+          token: ${{ env.CLIENT_GITHUB_TOKEN || secrets.EXTERNAL_REPO_GITHUB_TOKEN || github.token }}
           path: site
 
       - name: Setup pnpm

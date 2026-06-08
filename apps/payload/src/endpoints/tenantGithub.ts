@@ -4,6 +4,10 @@ import { isSuperAdmin } from '../access/isSuperAdmin'
 import { dispatchWorkflow, workflowRunsUrl } from '../lib/githubDispatch'
 import { parseGithubRepo } from '../lib/parseGithubRepo'
 import { validateGithubRepository } from '../lib/githubRepoApi'
+import {
+  resolveGithubTokenForTenant,
+  type TenantGithubAuth,
+} from '../lib/resolveGithubToken'
 import { tenantHasModule } from '../lib/tenantModules'
 
 type JsonBody = {
@@ -27,14 +31,15 @@ function extractId(req: PayloadRequest): string | null {
   return typeof id === 'string' || typeof id === 'number' ? String(id) : null
 }
 
-async function loadTenant(req: PayloadRequest, id: string) {
-  return req.payload.findByID({ collection: 'tenants', id, depth: 0 }) as Promise<{
+async function loadTenant(req: PayloadRequest, id: string, depth = 0) {
+  return req.payload.findByID({ collection: 'tenants', id, depth }) as Promise<{
     id: string | number
     slug?: string
     githubRepo?: string | null
     githubBranch?: string | null
     blogContentPath?: string | null
     enabledModules?: string[] | null
+    githubCredential?: unknown
   } | null>
 }
 
@@ -56,7 +61,7 @@ export const validateGithubEndpoint: Endpoint = {
     const id = extractId(req)
     if (!id) return json({ ok: false, message: 'Missing tenant id.' }, 400)
 
-    const tenant = await loadTenant(req, id)
+    const tenant = await loadTenant(req, id, 1)
     if (!tenant) return json({ ok: false, message: 'Tenant not found.' }, 404)
 
     const parsed = tenant.githubRepo ? parseGithubRepo(tenant.githubRepo) : null
@@ -64,18 +69,38 @@ export const validateGithubEndpoint: Endpoint = {
       return json({ ok: false, message: 'Set a valid GitHub repository (owner/repo) first.' }, 400)
     }
 
+    const auth = await resolveGithubTokenForTenant(req.payload, tenant as TenantGithubAuth)
     const result = await validateGithubRepository({
       repoFull: parsed.full,
       branch: tenant.githubBranch?.trim() || 'main',
       blogContentPath: tenant.blogContentPath?.trim() || 'src/content/blog',
+      token: auth?.token,
     })
+
+    if (tenant.githubCredential && typeof tenant.githubCredential === 'object') {
+      const credId = (tenant.githubCredential as { id?: string | number }).id
+      if (credId != null) {
+        await req.payload.update({
+          collection: 'github-credentials',
+          id: credId,
+          data: {
+            lastValidatedAt: new Date().toISOString(),
+            lastValidationError: result.ok ? null : result.message,
+          } as never,
+          overrideAccess: true,
+        })
+      }
+    }
 
     await req.payload.update({
       collection: 'tenants',
       id: tenant.id,
       data: {
         githubSetupStatus: result.ok ? 'validated' : 'failed',
-        githubValidationNotes: result.notes.join('\n'),
+        githubValidationNotes: [
+          auth ? `Token source: ${auth.source}.` : 'Token source: platform env.',
+          ...result.notes,
+        ].join('\n'),
       } as never,
       overrideAccess: true,
     })

@@ -58,16 +58,24 @@ jobs:
         with:
           path: platform
 
+      - name: Resolve client repo GitHub token
+        if: env.DEPLOY_MODE == 'external' && env.GITHUB_REPO != ''
+        working-directory: platform
+        env:
+          DEPLOY_REPORT_TOKEN: ${{ secrets.DEPLOY_REPORT_TOKEN }}
+          GH_FALLBACK_TOKEN: ${{ secrets.EXTERNAL_REPO_GITHUB_TOKEN || github.token }}
+        run: |
+          chmod +x .github/scripts/resolve-client-github-token.sh
+          .github/scripts/resolve-client-github-token.sh >> "$GITHUB_ENV"
+
       - name: Checkout client site (external)
         if: env.DEPLOY_MODE == 'external' && env.GITHUB_REPO != ''
         uses: actions/checkout@v4
         with:
           repository: ${{ env.GITHUB_REPO }}
           ref: ${{ env.GITHUB_BRANCH }}
-          # Default github.token cannot read other users' private repos. Add a PAT as
-          # EXTERNAL_REPO_GITHUB_TOKEN (repo secret on astropayload) with read access
-          # to client repos — same token as Payload GITHUB_TOKEN is fine if scoped.
-          token: ${{ secrets.EXTERNAL_REPO_GITHUB_TOKEN || github.token }}
+          # Per-tenant credential via /api/ci/github-token, else EXTERNAL_REPO_GITHUB_TOKEN / github.token
+          token: ${{ env.CLIENT_GITHUB_TOKEN || secrets.EXTERNAL_REPO_GITHUB_TOKEN || github.token }}
           path: site
 
       - name: Setup pnpm (platform)

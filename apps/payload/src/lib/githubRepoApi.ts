@@ -13,20 +13,23 @@ export interface RepoValidationResult {
   packageManager?: 'pnpm' | 'npm' | 'unknown'
 }
 
-function githubToken(): string | null {
-  return process.env.GITHUB_TOKEN ?? null
-}
-
 export async function validateGithubRepository(opts: {
   repoFull: string
   branch: string
   blogContentPath: string
+  /** When omitted, uses GITHUB_TOKEN / EXTERNAL_REPO_GITHUB_TOKEN from env. */
+  token?: string | null
 }): Promise<RepoValidationResult> {
-  const token = githubToken()
+  const token =
+    opts.token?.trim() ||
+    process.env.EXTERNAL_REPO_GITHUB_TOKEN?.trim() ||
+    process.env.GITHUB_TOKEN?.trim() ||
+    null
   if (!token) {
     return {
       ok: false,
-      message: 'GITHUB_TOKEN is not configured in apps/payload/.env.',
+      message:
+        'No GitHub token. Link a credential on the tenant, or set EXTERNAL_REPO_GITHUB_TOKEN / GITHUB_TOKEN in apps/payload/.env.',
       notes: [],
     }
   }

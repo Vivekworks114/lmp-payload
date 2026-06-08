@@ -33,3 +33,31 @@ ALTER TABLE users
 -- Media: per-tenant R2 key prefix (set by Media beforeOperation hook + storage-s3)
 ALTER TABLE media
   ADD COLUMN IF NOT EXISTS prefix varchar;
+
+-- GitHub credentials (encrypted PATs for external client repos)
+CREATE TABLE IF NOT EXISTS github_credentials (
+  id serial PRIMARY KEY,
+  label varchar NOT NULL,
+  github_owner varchar,
+  token_last4 varchar,
+  token_encrypted varchar,
+  notes varchar,
+  last_validated_at timestamptz,
+  last_validation_error varchar,
+  created_at timestamptz DEFAULT now() NOT NULL,
+  updated_at timestamptz DEFAULT now() NOT NULL
+);
+
+ALTER TABLE tenants
+  ADD COLUMN IF NOT EXISTS github_credential_id integer;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'tenants_github_credential_id_fk'
+  ) THEN
+    ALTER TABLE tenants
+      ADD CONSTRAINT tenants_github_credential_id_fk
+      FOREIGN KEY (github_credential_id) REFERENCES github_credentials (id) ON DELETE SET NULL;
+  END IF;
+END $$;
