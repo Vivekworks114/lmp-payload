@@ -13,6 +13,7 @@ export const BLOG_FILE_EXTENSIONS: readonly BlogFileExtension[] = ['md', 'mdx']
 const KNOWN_KEYS = new Set([
   'title',
   'description',
+  'excerpt',
   'pubDate',
   'updatedDate',
   'author',
@@ -98,6 +99,49 @@ function splitKnown(data: Record<string, unknown>) {
   return { known, extra }
 }
 
+function nonEmptyString(value: unknown): string | undefined {
+  if (value == null) return undefined
+  const trimmed = String(value).trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+/** Plain-text excerpt for imports when frontmatter omits description. */
+function excerptFromBody(body: string, maxLen = 500): string | undefined {
+  const text = body
+    .replace(/^#+\s+.*$/gm, '')
+    .replace(/!\[[^\]]*]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)]\([^)]*\)/g, '$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/[*_`~]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!text) return undefined
+  if (text.length <= maxLen) return text
+  return `${text.slice(0, maxLen - 1).trim()}…`
+}
+
+function resolveImportDescription(
+  known: Record<string, unknown>,
+  extra: Record<string, unknown>,
+  body: string,
+  title: string,
+): string {
+  const candidates = [
+    known.description,
+    known.excerpt,
+    extra.excerpt,
+    extra.summary,
+    extra.metaDescription,
+    excerptFromBody(body),
+    title,
+  ]
+  for (const candidate of candidates) {
+    const value = nonEmptyString(candidate)
+    if (value) return value.slice(0, 500)
+  }
+  return title.slice(0, 500) || 'Blog post'
+}
+
 export function blogPostDataFromFile(
   raw: string,
   slug: string,
@@ -105,8 +149,8 @@ export function blogPostDataFromFile(
 ): Record<string, unknown> {
   const { data, body: rawBody } = parseFrontmatter(raw)
   const { known, extra } = splitKnown(data)
-  const title = String(known.title ?? slug)
-  const description = String(known.description ?? title).slice(0, 500)
+  const title = nonEmptyString(known.title) ?? slug
+  const description = resolveImportDescription(known, extra, rawBody, title)
   const body = sanitizeMarkdownForAstro(rawBody, { title })
   const pubDate = known.pubDate
     ? new Date(String(known.pubDate)).toISOString()
