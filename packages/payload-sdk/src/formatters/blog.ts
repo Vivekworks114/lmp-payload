@@ -49,12 +49,13 @@ export function formatBlogMarkdown(
   doc: BlogDoc,
   extension: BlogFileExtension = 'md',
 ): FormattedFile {
+  const pubDate = normalizeFrontmatterDate(doc.pubDate)
   const frontmatter: Record<string, unknown> = {
     title: doc.title,
     description: doc.description,
-    pubDate: doc.pubDate,
+    pubDate,
   }
-  if (doc.updatedDate) frontmatter.updatedDate = doc.updatedDate
+  if (doc.updatedDate) frontmatter.updatedDate = normalizeFrontmatterDate(doc.updatedDate)
   if (doc.author) frontmatter.author = doc.author
   // Astro content schema uses image() — only local asset paths work. Skip remote URLs
   // (R2/CDN); posts still render without a hero image.
@@ -80,7 +81,7 @@ export function formatBlogMarkdown(
   const slug = resolveBlogSlug(doc.slug, doc.title, doc.id)
   frontmatter.slug = slug
   if (frontmatter.date == null || frontmatter.date === '') {
-    frontmatter.date = frontmatter.pubDate ?? doc.pubDate
+    frontmatter.date = pubDate ?? normalizeFrontmatterDate(doc.pubDate)
   }
 
   const yaml = toYaml(frontmatter)
@@ -89,6 +90,13 @@ export function formatBlogMarkdown(
     filename: `${slug}.${extension}`,
     body: `---\n${yaml}---\n\n${md}`,
   }
+}
+
+function normalizeFrontmatterDate(value: unknown): string | undefined {
+  if (value == null || value === '') return undefined
+  const d = value instanceof Date ? value : new Date(String(value))
+  if (Number.isNaN(d.getTime())) return undefined
+  return d.toISOString().slice(0, 10)
 }
 
 function toYaml(obj: Record<string, unknown>): string {
