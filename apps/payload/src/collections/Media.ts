@@ -1,6 +1,6 @@
 import type { CollectionConfig, CollectionBeforeOperationHook } from 'payload'
 
-import { authenticatedRead, publicRead } from '../access/tenantAccess'
+import { authenticatedRead, cmsApiRead } from '../access/tenantAccess'
 import { totpPublicReadCustom } from '../access/totpPublicRead'
 
 /**
@@ -39,7 +39,7 @@ export const Media: CollectionConfig = {
     group: 'Content',
   },
   access: {
-    read: publicRead,
+    read: cmsApiRead,
     create: authenticatedRead,
     update: authenticatedRead,
     delete: authenticatedRead,

@@ -26,9 +26,10 @@ Commands:
            --slug <slug> --site <path> [--blog-path <path>]
 
 Globals (env or flag):
-  PAYLOAD_URL       Payload server URL
-  PAYLOAD_API_KEY   Bearer API key for non-public reads / writes
-  TENANT            Default --slug
+  PAYLOAD_URL            Payload server URL
+  PAYLOAD_API_KEY        Super-admin API key (Users → Enable API Key) — required for sync unless DEPLOY_REPORT_TOKEN is set
+  DEPLOY_REPORT_TOKEN     Optional CI service token (must match CMS server .env)
+  TENANT                 Default --slug
 `
 
 async function main() {

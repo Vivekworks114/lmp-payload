@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import { sanitizeBlogSlug } from '@astropayload/payload-sdk/formatters'
 
-import { authenticatedRead, publicRead } from '../access/tenantAccess'
+import { authenticatedRead, cmsApiRead } from '../access/tenantAccess'
 import { totpPublicReadCustom } from '../access/totpPublicRead'
 import { contentPublishComponents, seoFields, slugField } from './_shared'
 
@@ -20,7 +20,7 @@ export const BlogPosts: CollectionConfig = {
     components: contentPublishComponents,
   },
   access: {
-    read: publicRead,
+    read: cmsApiRead,
     create: authenticatedRead,
     update: authenticatedRead,
     delete: authenticatedRead,

@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { isSuperAdmin } from '../access/isSuperAdmin'
 import { totpPublicReadCustom } from '../access/totpPublicRead'
-import { publicRead } from '../access/tenantAccess'
+import { cmsApiRead } from '../access/tenantAccess'
 import { importBlogContentEndpoint } from '../endpoints/importBlogCi'
 import {
   reportDeployEndpoint,
@@ -36,8 +36,8 @@ export const Tenants: CollectionConfig = {
     hidden: ({ user }) => !isSuperAdmin(user),
   },
   access: {
-    // Public read for Astro builds via API key / unauthenticated REST.
-    read: publicRead,
+    // REST read: API key (PAYLOAD_API_KEY) or CI service token — not public.
+    read: cmsApiRead,
     create: ({ req }) => isSuperAdmin(req.user),
     update: ({ req }) => isSuperAdmin(req.user),
     delete: ({ req }) => isSuperAdmin(req.user),

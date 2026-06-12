@@ -6,7 +6,9 @@
 
 export interface PayloadClientOptions {
   url: string                  // Payload server URL, e.g. https://cms.example.com
-  apiKey?: string              // Bearer token (omit for public read collections)
+  apiKey?: string              // Bearer token (users API-Key / PAYLOAD_API_KEY)
+  /** CI service token — alternative to apiKey when DEPLOY_REPORT_TOKEN is set on CMS. */
+  deployReportToken?: string
   tenantSlug: string
   /** Throw if any request takes longer than this many ms. Default 30s. */
   timeoutMs?: number
@@ -32,6 +34,7 @@ export interface PayloadFindArgs {
 export class PayloadClient {
   private readonly url: string
   private readonly apiKey?: string
+  private readonly deployReportToken?: string
   private readonly tenantSlug: string
   private readonly timeoutMs: number
   private tenantId: string | null = null
@@ -39,6 +42,7 @@ export class PayloadClient {
   constructor(opts: PayloadClientOptions) {
     this.url = opts.url.replace(/\/+$/, '')
     this.apiKey = opts.apiKey
+    this.deployReportToken = opts.deployReportToken
     this.tenantSlug = opts.tenantSlug
     this.timeoutMs = opts.timeoutMs ?? 30_000
   }
@@ -156,6 +160,17 @@ export class PayloadClient {
     return this.request<T>('PATCH', `/api/${collection}/${encodeURIComponent(id)}`, data)
   }
 
+  private authHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {}
+    if (this.apiKey) {
+      headers.Authorization = `users API-Key ${this.apiKey}`
+    }
+    if (this.deployReportToken) {
+      headers['x-deploy-report-token'] = this.deployReportToken
+    }
+    return headers
+  }
+
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), this.timeoutMs)
@@ -164,14 +179,20 @@ export class PayloadClient {
         method,
         headers: {
           'content-type': 'application/json',
-          ...(this.apiKey ? { Authorization: `users API-Key ${this.apiKey}` } : {}),
+          ...this.authHeaders(),
         },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })
       if (!res.ok) {
         const text = await res.text().catch(() => '')
-        throw new Error(`[payload-sdk] ${method} ${path} -> ${res.status}: ${text.slice(0, 500)}`)
+        const authHint =
+          res.status === 401 || res.status === 403
+            ? ' Set PAYLOAD_API_KEY (super-admin Users → Enable API Key) or DEPLOY_REPORT_TOKEN matching the CMS server.'
+            : ''
+        throw new Error(
+          `[payload-sdk] ${method} ${path} -> ${res.status}: ${text.slice(0, 500)}${authHint}`,
+        )
       }
       return (await res.json()) as T
     } finally {
