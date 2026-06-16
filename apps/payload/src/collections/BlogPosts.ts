@@ -82,7 +82,24 @@ export const BlogPosts: CollectionConfig = {
       },
     },
     { name: 'updatedDate', type: 'date' },
-    { name: 'heroImage', type: 'upload', relationTo: 'media' },
+    {
+      name: 'heroImage',
+      type: 'upload',
+      relationTo: 'media',
+      admin: {
+        description:
+          'Main post image (synced as heroImage in markdown). Uploaded to R2 under tenants/<site-slug>/.',
+      },
+    },
+    {
+      name: 'featuredImage',
+      type: 'upload',
+      relationTo: 'media',
+      admin: {
+        description:
+          'Optional card/listing image (synced as featuredImage). Use when the Astro site expects featuredImage instead of heroImage.',
+      },
+    },
     { name: 'author', type: 'text' },
     {
       name: 'categories',

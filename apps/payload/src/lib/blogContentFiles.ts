@@ -18,6 +18,7 @@ const KNOWN_KEYS = new Set([
   'updatedDate',
   'author',
   'heroImage',
+  'featuredImage',
   'categories',
   'tags',
   'slug',

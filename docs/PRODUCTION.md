@@ -66,6 +66,7 @@ Alternatives: AWS RDS, Supabase, Render, any managed Postgres ≥ 15.
 2. **Settings → Public access** → either enable the `*.r2.dev` URL (dev) or attach a custom domain like `media.yourcompany.com` (recommended for prod — better caching, branded URLs).
 3. **Settings → CORS policy** → allow GET from all your tenant domains (or `*` while you're getting started).
 4. **Manage R2 API Tokens** → **Create API Token** → scope it to "Object Read & Write" on this bucket. **Copy the access key + secret once** (Cloudflare only shows them at creation).
+5. Set **`R2_PUBLIC_URL`** in Payload `.env` to the bucket's **public** URL (the `*.r2.dev` link or your custom domain like `https://media.yourcompany.com`). This is **not** the S3 API endpoint (`*.r2.cloudflarestorage.com`) — that one is for uploads only.
 
 ### 1.3 Provision the Payload CMS host
 

@@ -257,6 +257,8 @@ export interface Tenant {
   createdAt: string;
 }
 /**
+ * Images and files for blog posts (hero, featured, SEO). With R2 configured, uploads are stored in your Cloudflare bucket.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
  */
@@ -406,7 +408,14 @@ export interface BlogPost {
    */
   pubDate: string;
   updatedDate?: string | null;
+  /**
+   * Main post image (synced as heroImage in markdown). Uploaded to R2 under tenants/<site-slug>/.
+   */
   heroImage?: (number | null) | Media;
+  /**
+   * Optional card/listing image (synced as featuredImage). Use when the Astro site expects featuredImage instead of heroImage.
+   */
+  featuredImage?: (number | null) | Media;
   author?: string | null;
   categories?:
     | {
@@ -666,6 +675,7 @@ export interface BlogPostsSelect<T extends boolean = true> {
   pubDate?: T;
   updatedDate?: T;
   heroImage?: T;
+  featuredImage?: T;
   author?: T;
   categories?:
     | T

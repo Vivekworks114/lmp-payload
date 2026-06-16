@@ -37,6 +37,8 @@ export const Media: CollectionConfig = {
   admin: {
     useAsTitle: 'filename',
     group: 'Content',
+    description:
+      'Images and files for blog posts (hero, featured, SEO). With R2 configured, uploads are stored in your Cloudflare bucket.',
   },
   access: {
     read: cmsApiRead,

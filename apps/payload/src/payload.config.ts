@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { s3Storage } from '@payloadcms/storage-s3'
 import { buildConfig } from 'payload'
 import { payloadTotp } from 'payload-totp'
 import sharp from 'sharp'
@@ -17,8 +16,11 @@ import { GithubCredentials } from './collections/GithubCredentials'
 import { isSuperAdmin } from './access/isSuperAdmin'
 import { ciGithubTokenEndpoint } from './endpoints/ciGithubToken'
 import { scheduledPublishEndpoint } from './endpoints/scheduledPublish'
+import { r2StoragePlugin } from './lib/r2Storage'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
+
+const r2Plugin = r2StoragePlugin()
 
 function buildOriginList(): string[] {
   const list = new Set<string>()
@@ -103,31 +105,7 @@ export default buildConfig({
       userHasAccessToAllTenants: (user) => isSuperAdmin(user),
     }),
 
-    ...(process.env.R2_BUCKET &&
-    process.env.R2_ACCOUNT_ID &&
-    process.env.R2_ACCESS_KEY_ID &&
-    process.env.R2_SECRET_ACCESS_KEY
-      ? [
-          s3Storage({
-            // Keep prefix in schema even when R2 env vars differ between environments.
-            alwaysInsertFields: true,
-            collections: {
-              media: {
-                prefix: 'tenants',
-              },
-            },
-            bucket: process.env.R2_BUCKET,
-            config: {
-              endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-              region: 'auto',
-              credentials: {
-                accessKeyId: process.env.R2_ACCESS_KEY_ID,
-                secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-              },
-            },
-          }),
-        ]
-      : []),
+    ...(r2Plugin ? [r2Plugin] : []),
 
     // Must stay last — wraps access controls for TOTP verification on admin login.
     payloadTotp({

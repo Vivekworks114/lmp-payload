@@ -18,6 +18,7 @@ interface BlogDoc {
   updatedDate?: string | null
   author?: string | null
   heroImage?: { url?: string; alt?: string; filename?: string } | string | null
+  featuredImage?: { url?: string; alt?: string; filename?: string } | string | null
   categories?: Array<{ value: string }> | null
   tags?: Array<{ value: string }> | null
   content: unknown
@@ -39,6 +40,7 @@ const RESERVED_FRONTMATTER_KEYS = new Set([
   'updatedDate',
   'author',
   'heroImage',
+  'featuredImage',
   'categories',
   'tags',
   'slug',
@@ -57,14 +59,10 @@ export function formatBlogMarkdown(
   }
   if (doc.updatedDate) frontmatter.updatedDate = normalizeFrontmatterDate(doc.updatedDate)
   if (doc.author) frontmatter.author = doc.author
-  // Astro content schema uses image() — only local asset paths work. Skip remote URLs
-  // (R2/CDN); posts still render without a hero image.
-  if (doc.heroImage && typeof doc.heroImage === 'object' && doc.heroImage.url) {
-    const url = doc.heroImage.url
-    if (!/^https?:\/\//i.test(url)) {
-      frontmatter.heroImage = url
-    }
-  }
+  const hero = localImageFrontmatterPath(doc.heroImage)
+  if (hero) frontmatter.heroImage = hero
+  const featured = localImageFrontmatterPath(doc.featuredImage)
+  if (featured) frontmatter.featuredImage = featured
   if (doc.categories?.length) {
     frontmatter.categories = doc.categories.map((c) => c.value).filter(Boolean)
   }
@@ -90,6 +88,16 @@ export function formatBlogMarkdown(
     filename: `${slug}.${extension}`,
     body: `---\n${yaml}---\n\n${md}`,
   }
+}
+
+function localImageFrontmatterPath(
+  image?: { url?: string } | string | null,
+): string | undefined {
+  if (!image || typeof image !== 'object' || !image.url) return undefined
+  const url = image.url
+  // Astro image() fields need repo-relative paths; CDN URLs stay in markdown body only.
+  if (/^https?:\/\//i.test(url)) return undefined
+  return url
 }
 
 function normalizeFrontmatterDate(value: unknown): string | undefined {
