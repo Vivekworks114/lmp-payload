@@ -3,7 +3,12 @@ import { sanitizeBlogSlug } from '@astropayload/payload-sdk/formatters'
 
 import { authenticatedRead, cmsApiRead } from '../access/tenantAccess'
 import { totpPublicReadCustom } from '../access/totpPublicRead'
-import { contentPublishComponents, seoFields, slugField } from './_shared'
+import {
+  contentPublishComponents,
+  publishContentBarField,
+  seoFields,
+  slugField,
+} from './_shared'
 
 /**
  * Mirrors keukenfaqs-main src/content.config.ts `blog` schema so the sync
@@ -47,6 +52,7 @@ export const BlogPosts: CollectionConfig = {
     ],
   },
   fields: [
+    publishContentBarField(),
     { name: 'title', type: 'text', required: true },
     slugField(),
     { name: 'description', type: 'textarea', required: true },

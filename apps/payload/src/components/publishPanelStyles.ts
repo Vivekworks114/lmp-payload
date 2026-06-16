@@ -2,12 +2,14 @@
 
 export const publishPanelCard: React.CSSProperties = {
   width: '100%',
+  maxWidth: '100%',
   boxSizing: 'border-box',
   borderRadius: 8,
   border: '1px solid var(--theme-elevation-150, #e5e7eb)',
   background: 'var(--theme-elevation-50, #f9fafb)',
   padding: '16px 20px',
-  marginBottom: 16,
+  marginBottom: 8,
+  position: 'relative',
 }
 
 export const publishPrimaryButton = (disabled: boolean): React.CSSProperties => ({

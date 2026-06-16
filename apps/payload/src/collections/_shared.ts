@@ -29,12 +29,21 @@ export const slugField = (description?: string): Field => ({
   admin: { description: description ?? 'URL slug. Auto-normalized: lowercase, hyphens, no special characters.' },
 })
 
-/** Publish bar on list + edit views (manual publish — no auto-deploy on save). */
+/** Publish bar above the list table (manual publish — no auto-deploy on save). */
 export const contentPublishComponents = {
-  list: {
-    beforeListTable: ['/components/PublishContentBar.client#PublishContentBar'],
-  },
-  edit: {
-    beforeDocumentControls: ['/components/PublishContentBar.client#PublishContentBar'],
-  },
+  beforeListTable: ['/components/PublishContentBar.client#PublishContentBar'],
 }
+
+/**
+ * In-document publish panel for edit/create views.
+ * Use as the first field — do not use `edit.beforeDocumentControls` (that slot overlaps form fields).
+ */
+export const publishContentBarField = (): Field => ({
+  name: 'publishLiveSite',
+  type: 'ui',
+  admin: {
+    components: {
+      Field: '/components/PublishContentBar.client#PublishContentBar',
+    },
+  },
+})
