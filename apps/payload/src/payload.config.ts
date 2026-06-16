@@ -105,7 +105,7 @@ export default buildConfig({
       userHasAccessToAllTenants: (user) => isSuperAdmin(user),
     }),
 
-    ...(r2Plugin ? [r2Plugin] : []),
+    r2Plugin,
 
     // Must stay last — wraps access controls for TOTP verification on admin login.
     payloadTotp({

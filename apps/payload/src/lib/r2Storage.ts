@@ -20,18 +20,20 @@ function r2PublicBaseUrl(): string | undefined {
 /**
  * Cloudflare R2 via the S3-compatible API.
  *
+ * Always registered (may be `enabled: false` when env vars are missing) so
+ * `payload generate:importmap` includes storage-s3 components at build time.
+ *
  * Requires R2_BUCKET, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY.
- * Set R2_PUBLIC_URL to the bucket's public domain (*.r2.dev or custom CDN) so
- * heroImage / featuredImage / ogImage URLs work on live Astro sites.
+ * Set R2_PUBLIC_URL to the bucket public domain (*.r2.dev or custom CDN).
  */
-export function r2StoragePlugin(): Plugin | null {
-  if (!isR2StorageConfigured()) return null
-
-  const bucket = process.env.R2_BUCKET!
-  const accountId = process.env.R2_ACCOUNT_ID!
+export function r2StoragePlugin(): Plugin {
+  const configured = isR2StorageConfigured()
+  const bucket = process.env.R2_BUCKET || 'disabled'
+  const accountId = process.env.R2_ACCOUNT_ID || 'disabled'
   const publicBase = r2PublicBaseUrl()
 
   return s3Storage({
+    enabled: configured,
     alwaysInsertFields: true,
     bucket,
     collections: {
@@ -53,8 +55,8 @@ export function r2StoragePlugin(): Plugin | null {
       region: 'auto',
       forcePathStyle: true,
       credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+        accessKeyId: process.env.R2_ACCESS_KEY_ID || 'disabled',
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || 'disabled',
       },
     },
   })
