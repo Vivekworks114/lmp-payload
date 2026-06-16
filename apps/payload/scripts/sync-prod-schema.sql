@@ -100,3 +100,20 @@ CREATE INDEX IF NOT EXISTS payload_preferences_rels_github_credentials_id_idx
 -- Blog posts: draft / scheduled / published (scheduled auto-promote via cron)
 ALTER TABLE blog_posts
   ADD COLUMN IF NOT EXISTS publish_status varchar DEFAULT 'published';
+
+-- Blog posts: optional featured/card image (upload → media)
+ALTER TABLE blog_posts
+  ADD COLUMN IF NOT EXISTS featured_image_id integer;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'blog_posts_featured_image_id_media_id_fk'
+  ) THEN
+    ALTER TABLE blog_posts
+      ADD CONSTRAINT blog_posts_featured_image_id_media_id_fk
+      FOREIGN KEY (featured_image_id) REFERENCES media (id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS blog_posts_featured_image_id_idx ON blog_posts (featured_image_id);
