@@ -22,6 +22,7 @@
     "auto-import-blog-if-empty": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/auto-import-blog-if-empty.ts",
     "import:blog-from-repo-api": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/import-blog-from-repo-api.ts",
     "report:github-setup": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/report-tenant-github-setup.ts",
+    "scheduled-publish:run": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/run-scheduled-publish.ts",
     "db:users-tenants": "echo 'Run: psql \"$DATABASE_URI\" -f scripts/create-users-tenants-table.sql'",
     "db:sync-prod-schema": "echo 'Run on VPS: psql \"$DATABASE_URI\" -f scripts/sync-prod-schema.sql'",
     "generate:server-actions-key": "node -e \"const c=require('crypto');const k=c.randomBytes(32).toString('base64');console.log('Add to apps/payload/.env (then rm -rf .next && pnpm build):');console.log('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY='+k)\""

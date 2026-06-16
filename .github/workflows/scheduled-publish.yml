@@ -1,0 +1,31 @@
+name: Scheduled blog publish
+
+on:
+  schedule:
+    # Hourly — promotes due scheduled posts and triggers tenant deploy
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PAYLOAD_URL: ${{ secrets.PAYLOAD_URL }}
+      PAYLOAD_API_KEY: ${{ secrets.PAYLOAD_API_KEY }}
+      DEPLOY_REPORT_TOKEN: ${{ secrets.DEPLOY_REPORT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Promote due scheduled posts
+        working-directory: apps/payload
+        run: pnpm run scheduled-publish:run

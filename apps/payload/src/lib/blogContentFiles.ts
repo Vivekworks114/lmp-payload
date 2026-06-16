@@ -171,6 +171,7 @@ export function blogPostDataFromFile(
     title,
     slug: postSlug,
     description,
+    publishStatus: 'published',
     pubDate,
     updatedDate: known.updatedDate ? new Date(String(known.updatedDate)).toISOString() : undefined,
     author: known.author ? String(known.author) : undefined,

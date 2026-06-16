@@ -35,6 +35,14 @@ export async function dispatchTenantDeploy(
   tenant: TenantDeployTarget,
   reason: string,
 ): Promise<DispatchTenantDeployResult> {
+  return dispatchTenantDeployWithPayload(req.payload, tenant, reason)
+}
+
+export async function dispatchTenantDeployWithPayload(
+  payload: PayloadRequest['payload'],
+  tenant: TenantDeployTarget,
+  reason: string,
+): Promise<DispatchTenantDeployResult> {
   if (!tenant.slug) {
     return { ok: false, status: 400, message: 'Tenant has no slug.', error: 'missing slug' }
   }
@@ -117,7 +125,7 @@ export async function dispatchTenantDeploy(
     }
   }
 
-  await req.payload.update({
+  await payload.update({
     collection: 'tenants',
     id: tenant.id,
     data: {

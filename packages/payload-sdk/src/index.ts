@@ -1,4 +1,5 @@
 export * from './client'
 export * from './sync'
 export * from './formatters'
+export * from './blogPublishSchedule'
 export { lexicalToMarkdown } from './lexical'

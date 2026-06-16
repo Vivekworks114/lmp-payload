@@ -15,7 +15,7 @@ export const BlogPosts: CollectionConfig = {
   labels: { singular: 'Blog Post', plural: 'Blog Posts' },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', 'pubDate', 'updatedAt'],
+    defaultColumns: ['title', 'slug', 'publishStatus', 'pubDate', 'updatedAt'],
     group: 'Content',
     components: contentPublishComponents,
   },
@@ -50,7 +50,31 @@ export const BlogPosts: CollectionConfig = {
     { name: 'title', type: 'text', required: true },
     slugField(),
     { name: 'description', type: 'textarea', required: true },
-    { name: 'pubDate', type: 'date', required: true },
+    {
+      name: 'publishStatus',
+      type: 'select',
+      defaultValue: 'published',
+      required: true,
+      options: [
+        { label: 'Draft', value: 'draft' },
+        { label: 'Scheduled', value: 'scheduled' },
+        { label: 'Published', value: 'published' },
+      ],
+      admin: {
+        description:
+          'Draft = CMS only. Scheduled = goes live automatically when Pub date is reached (hourly cron). Published = live when Pub date is today or earlier.',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'pubDate',
+      type: 'date',
+      required: true,
+      admin: {
+        date: { pickerAppearance: 'dayAndTime' },
+        description: 'Display date on the site. Also used as the go-live time for scheduled posts.',
+      },
+    },
     { name: 'updatedDate', type: 'date' },
     { name: 'heroImage', type: 'upload', relationTo: 'media' },
     { name: 'author', type: 'text' },

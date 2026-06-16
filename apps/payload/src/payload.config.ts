@@ -16,6 +16,7 @@ import { Media } from './collections/Media'
 import { GithubCredentials } from './collections/GithubCredentials'
 import { isSuperAdmin } from './access/isSuperAdmin'
 import { ciGithubTokenEndpoint } from './endpoints/ciGithubToken'
+import { scheduledPublishEndpoint } from './endpoints/scheduledPublish'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -52,7 +53,7 @@ export default buildConfig({
 
   collections: [Tenants, Users, BlogPosts, Media, GithubCredentials],
 
-  endpoints: [ciGithubTokenEndpoint],
+  endpoints: [ciGithubTokenEndpoint, scheduledPublishEndpoint],
 
   editor: lexicalEditor({}),
 

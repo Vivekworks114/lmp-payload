@@ -96,3 +96,7 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS payload_preferences_rels_github_credentials_id_idx
   ON payload_preferences_rels (github_credentials_id);
+
+-- Blog posts: draft / scheduled / published (scheduled auto-promote via cron)
+ALTER TABLE blog_posts
+  ADD COLUMN IF NOT EXISTS publish_status varchar DEFAULT 'published';

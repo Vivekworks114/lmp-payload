@@ -328,9 +328,6 @@ export interface GithubCredential {
    * Optional GitHub user or org (for your notes).
    */
   githubOwner?: string | null;
-  /**
-   * Personal access token (write-only, not stored). Leave blank when editing to keep the existing token.
-   */
   token?: string | null;
   /**
    * Last four characters of the stored token.
@@ -400,6 +397,13 @@ export interface BlogPost {
    */
   slug: string;
   description: string;
+  /**
+   * Draft = CMS only. Scheduled = goes live automatically when Pub date is reached (hourly cron). Published = live when Pub date is today or earlier.
+   */
+  publishStatus: 'draft' | 'scheduled' | 'published';
+  /**
+   * Display date on the site. Also used as the go-live time for scheduled posts.
+   */
   pubDate: string;
   updatedDate?: string | null;
   heroImage?: (number | null) | Media;
@@ -658,6 +662,7 @@ export interface BlogPostsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   description?: T;
+  publishStatus?: T;
   pubDate?: T;
   updatedDate?: T;
   heroImage?: T;

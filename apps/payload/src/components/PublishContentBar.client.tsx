@@ -127,7 +127,7 @@ export function PublishContentBar(): React.ReactElement | null {
             }}
           >
             {tenantId
-              ? `Saving updates the CMS only. Publish when ready${tenantLabel ? ` (${tenantLabel})` : ''}.`
+              ? `Saving updates the CMS only. Publish when ready${tenantLabel ? ` (${tenantLabel})` : ''}. Posts set to Scheduled go live automatically when their pub date is reached (checked hourly).`
               : 'Select a site in the tenant switcher above, then publish your saved changes.'}
           </p>
         </div>
