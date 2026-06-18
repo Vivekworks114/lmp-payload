@@ -2,7 +2,7 @@
  * Rules for when a blog post is included in site sync / live deploy.
  *
  * - draft: never on live site
- * - scheduled: live when pubDate <= now (auto-promoted to published by cron)
+ * - scheduled: CMS only until cron promotes to published (then deploy runs)
  * - published: live when pubDate <= now
  */
 
@@ -12,7 +12,7 @@ export type BlogPublishStatus = 'draft' | 'scheduled' | 'published'
 export function liveBlogPostsWhere(asOf: Date = new Date()): Record<string, unknown> {
   return {
     and: [
-      { publishStatus: { not_equals: 'draft' } },
+      { publishStatus: { equals: 'published' } },
       { pubDate: { less_than_equal: asOf.toISOString() } },
     ],
   }

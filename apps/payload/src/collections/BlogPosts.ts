@@ -68,7 +68,7 @@ export const BlogPosts: CollectionConfig = {
       ],
       admin: {
         description:
-          'Draft = CMS only. Scheduled = goes live automatically when Pub date is reached (hourly cron). Published = live when Pub date is today or earlier.',
+          'Draft = CMS only. Scheduled = CMS only until pub date (hourly cron promotes to Published and deploys). Published = included on live site when Pub date is today or earlier.',
         position: 'sidebar',
       },
     },
