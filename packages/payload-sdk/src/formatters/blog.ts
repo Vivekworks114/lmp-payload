@@ -60,8 +60,10 @@ export function formatBlogMarkdown(
   if (doc.updatedDate) frontmatter.updatedDate = normalizeFrontmatterDate(doc.updatedDate)
   if (doc.author) frontmatter.author = doc.author
   const hero = localImageFrontmatterPath(doc.heroImage)
+    ?? extraStringField(doc.extra, 'heroImage')
   if (hero) frontmatter.heroImage = hero
   const featured = localImageFrontmatterPath(doc.featuredImage)
+    ?? extraStringField(doc.extra, 'featuredImage')
   if (featured) frontmatter.featuredImage = featured
   if (doc.categories?.length) {
     frontmatter.categories = doc.categories.map((c) => c.value).filter(Boolean)
@@ -90,6 +92,11 @@ export function formatBlogMarkdown(
   }
 }
 
+/**
+ * Resolve a local (repo-relative) image path from a Payload media object.
+ * String paths and CDN URLs are intentionally rejected here — use extraStringField
+ * for plain-string image paths stored in the `extra` JSON field.
+ */
 function localImageFrontmatterPath(
   image?: { url?: string } | string | null,
 ): string | undefined {
@@ -98,6 +105,16 @@ function localImageFrontmatterPath(
   // Astro image() fields need repo-relative paths; CDN URLs stay in markdown body only.
   if (/^https?:\/\//i.test(url)) return undefined
   return url
+}
+
+/** Return a non-empty string value from doc.extra[key], or undefined. */
+function extraStringField(
+  extra: Record<string, unknown> | null | undefined,
+  key: string,
+): string | undefined {
+  if (!extra) return undefined
+  const v = extra[key]
+  return typeof v === 'string' && v ? v : undefined
 }
 
 function normalizeFrontmatterDate(value: unknown): string | undefined {
@@ -125,5 +142,5 @@ function toYaml(obj: Record<string, unknown>): string {
 
 function quote(s: string): string {
   if (/^[\w\d:./@-]+$/.test(s) && !/^\d{4}-\d{2}-\d{2}/.test(s)) return s
-  return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+  return `"${s.replace(/\/g, '\\').replace(/"/g, '\\"')}"`
 }
