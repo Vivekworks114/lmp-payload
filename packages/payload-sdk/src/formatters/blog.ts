@@ -142,5 +142,5 @@ function toYaml(obj: Record<string, unknown>): string {
 
 function quote(s: string): string {
   if (/^[\w\d:./@-]+$/.test(s) && !/^\d{4}-\d{2}-\d{2}/.test(s)) return s
-  return `"${s.replace(/\/g, '\\').replace(/"/g, '\\"')}"`
+  return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
