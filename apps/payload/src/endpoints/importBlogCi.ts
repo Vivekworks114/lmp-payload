@@ -2,21 +2,13 @@ import type { Endpoint, PayloadRequest } from 'payload'
 
 import { isCiServiceAuthorized } from '../access/ciServiceAuth'
 import { blogPostDataFromFile, slugFromBlogFilename } from '../lib/blogContentFiles'
+import { parseEndpointJsonBody } from '../lib/parseEndpointBody'
 
 function json(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'content-type': 'application/json' },
   })
-}
-
-async function parseJsonBody(req: PayloadRequest): Promise<Record<string, unknown>> {
-  if (typeof req.json !== 'function') return {}
-  try {
-    return (await req.json()) as Record<string, unknown>
-  } catch {
-    return {}
-  }
 }
 
 async function findTenantBySlug(req: PayloadRequest, slug: string) {
@@ -66,7 +58,7 @@ export const importBlogContentEndpoint: Endpoint = {
       )
     }
 
-    const body = await parseJsonBody(req)
+    const body = await parseEndpointJsonBody(req)
     const slug = typeof body.slug === 'string' ? body.slug.trim() : ''
     const onlyIfEmpty = body.onlyIfEmpty === true
 

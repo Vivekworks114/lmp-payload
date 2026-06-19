@@ -1,6 +1,7 @@
 import type { Endpoint, PayloadRequest } from 'payload'
 
 import { isCiServiceAuthorized } from '../access/ciServiceAuth'
+import { parseEndpointJsonBody } from '../lib/parseEndpointBody'
 import {
   DEPLOY_STATUSES,
   SCAFFOLD_STATUSES,
@@ -55,12 +56,7 @@ function isGithubSetupStatus(v: unknown): v is GithubSetupStatus {
 }
 
 async function parseJsonBody(req: PayloadRequest): Promise<Record<string, unknown>> {
-  if (typeof req.json !== 'function') return {}
-  try {
-    return (await req.json()) as Record<string, unknown>
-  } catch {
-    return {}
-  }
+  return parseEndpointJsonBody(req)
 }
 
 export const reportDeployEndpoint: Endpoint = {
