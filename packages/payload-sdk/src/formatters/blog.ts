@@ -59,11 +59,13 @@ export function formatBlogMarkdown(
   }
   if (doc.updatedDate) frontmatter.updatedDate = normalizeFrontmatterDate(doc.updatedDate)
   if (doc.author) frontmatter.author = doc.author
-  const hero = localImageFrontmatterPath(doc.heroImage)
-    ?? extraStringField(doc.extra, 'heroImage')
+  const hero =
+    imageFrontmatterFromMedia(doc.heroImage) ?? extraStringField(doc.extra, 'heroImage')
+  const featured =
+    imageFrontmatterFromMedia(doc.featuredImage) ??
+    extraStringField(doc.extra, 'featuredImage') ??
+    hero
   if (hero) frontmatter.heroImage = hero
-  const featured = localImageFrontmatterPath(doc.featuredImage)
-    ?? extraStringField(doc.extra, 'featuredImage')
   if (featured) frontmatter.featuredImage = featured
   if (doc.categories?.length) {
     frontmatter.categories = doc.categories.map((c) => c.value).filter(Boolean)
@@ -93,18 +95,22 @@ export function formatBlogMarkdown(
 }
 
 /**
- * Resolve a local (repo-relative) image path from a Payload media object.
- * String paths and CDN URLs are intentionally rejected here — use extraStringField
- * for plain-string image paths stored in the `extra` JSON field.
+ * Image path or URL for markdown frontmatter from Payload media or extra JSON.
+ * R2/CDN URLs (https://…) are included — most Astro themes use string frontmatter.
  */
-function localImageFrontmatterPath(
+function imageFrontmatterFromMedia(
   image?: { url?: string } | string | null,
 ): string | undefined {
-  if (!image || typeof image !== 'object' || !image.url) return undefined
-  const url = image.url
-  // Astro image() fields need repo-relative paths; CDN URLs stay in markdown body only.
-  if (/^https?:\/\//i.test(url)) return undefined
-  return url
+  if (image == null) return undefined
+  if (typeof image === 'string') {
+    const trimmed = image.trim()
+    return trimmed.length > 0 ? trimmed : undefined
+  }
+  if (typeof image === 'object' && image.url) {
+    const url = image.url.trim()
+    return url.length > 0 ? url : undefined
+  }
+  return undefined
 }
 
 /** Return a non-empty string value from doc.extra[key], or undefined. */

@@ -88,7 +88,7 @@ export const BlogPosts: CollectionConfig = {
       relationTo: 'media',
       admin: {
         description:
-          'Main post image (synced as heroImage in markdown). Uploaded to R2 under tenants/<site-slug>/.',
+          'Main post image. Synced as heroImage (and featuredImage when empty) in markdown — R2 CDN URL or local path.',
       },
     },
     {
@@ -97,7 +97,7 @@ export const BlogPosts: CollectionConfig = {
       relationTo: 'media',
       admin: {
         description:
-          'Optional card/listing image (synced as featuredImage). Use when the Astro site expects featuredImage instead of heroImage.',
+          'Optional card/listing image. Synced as featuredImage in markdown. Falls back to Hero image when empty.',
       },
     },
     { name: 'author', type: 'text' },
