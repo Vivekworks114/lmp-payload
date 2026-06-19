@@ -11,20 +11,16 @@ export type BlogPublishStatus = 'draft' | 'scheduled' | 'published'
 /** Payload `where` clause: posts that should appear on the live site. */
 export function liveBlogPostsWhere(asOf: Date = new Date()): Record<string, unknown> {
   return {
-    and: [
-      { publishStatus: { equals: 'published' } },
-      { pubDate: { less_than_equal: asOf.toISOString() } },
-    ],
+    publishStatus: { equals: 'published' },
+    pubDate: { less_than_equal: asOf.toISOString() },
   }
 }
 
 /** Scheduled posts whose go-live time has passed (for auto-promote + deploy). */
 export function dueScheduledPostsWhere(asOf: Date = new Date()): Record<string, unknown> {
   return {
-    and: [
-      { publishStatus: { equals: 'scheduled' } },
-      { pubDate: { less_than_equal: asOf.toISOString() } },
-    ],
+    publishStatus: { equals: 'scheduled' },
+    pubDate: { less_than_equal: asOf.toISOString() },
   }
 }
 

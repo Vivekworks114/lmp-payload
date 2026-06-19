@@ -5,6 +5,7 @@ import type { TenantConfig, ThemeTokens } from '@astropayload/core'
 
 import { PayloadClient, type PayloadClientOptions } from './client'
 import { liveBlogPostsWhere } from './blogPublishSchedule'
+import { buildWhereSearchParams } from './buildWhereParams'
 import { formatBlogMarkdown, type BlogFileExtension, type FormattedFile } from './formatters'
 
 export interface SyncOptions extends PayloadClientOptions {
@@ -45,8 +46,16 @@ export async function syncTenantContent(opts: SyncOptions): Promise<{ blog: numb
 
     const ext: BlogFileExtension =
       (tenant as RawTenant).blogFileExtension === 'mdx' ? 'mdx' : 'md'
+    const blogWhere = liveBlogPostsWhere()
+    const queryPreview = buildWhereSearchParams({
+      ...blogWhere,
+      tenant: { equals: '(tenant-id)' },
+    }).toString()
+    console.log(
+      `[payload-sdk sync] blog-posts filter: publishStatus=published, pubDate<=now (excludes draft & scheduled). Query: ${queryPreview}`,
+    )
     const docs = await client.findAll<Parameters<typeof formatBlogMarkdown>[0]>('blog-posts', {
-      where: liveBlogPostsWhere(),
+      where: blogWhere,
     })
     await Promise.all(docs.map((d) => writeFormatted(dir, formatBlogMarkdown(d, ext))))
     blogCount = docs.length

@@ -4,6 +4,8 @@
  * filter so a build for tenant X only ever sees X's data.
  */
 
+import { buildWhereSearchParams, mergeSearchParams } from './buildWhereParams'
+
 export interface PayloadClientOptions {
   url: string                  // Payload server URL, e.g. https://cms.example.com
   apiKey?: string              // Bearer token (users API-Key / PAYLOAD_API_KEY)
@@ -99,7 +101,7 @@ export class PayloadClient {
       params.set('page', String(page))
       params.set('depth', String(depth))
       params.set('sort', sort)
-      flattenWhere(baseWhere, '', params)
+      mergeSearchParams(params, buildWhereSearchParams(baseWhere))
 
       const res = await this.request<PayloadFindResult<T>>(
         'GET',
@@ -123,7 +125,7 @@ export class PayloadClient {
       ...(extraWhere ?? {}),
       tenant: { equals: tenantId },
     }
-    flattenWhere(baseWhere, '', params)
+    mergeSearchParams(params, buildWhereSearchParams(baseWhere))
     const res = await this.request<PayloadFindResult<unknown>>(
       'GET',
       `/api/${collection}?${params.toString()}`,
@@ -144,7 +146,7 @@ export class PayloadClient {
       ...where,
       tenant: { equals: tenantId },
     }
-    flattenWhere(baseWhere, '', params)
+    mergeSearchParams(params, buildWhereSearchParams(baseWhere))
     const res = await this.request<PayloadFindResult<T>>(
       'GET',
       `/api/${collection}?${params.toString()}`,
@@ -197,23 +199,6 @@ export class PayloadClient {
       return (await res.json()) as T
     } finally {
       clearTimeout(timer)
-    }
-  }
-}
-
-/**
- * Flatten `{ tenant: { equals: 'x' }, slug: { contains: 'y' } }` into the
- * `where[tenant][equals]=x&where[slug][contains]=y` query syntax Payload uses.
- */
-function flattenWhere(where: Record<string, unknown>, prefix: string, out: URLSearchParams): void {
-  for (const [key, value] of Object.entries(where)) {
-    const nextKey = prefix ? `${prefix}[${key}]` : `where[${key}]`
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      flattenWhere(value as Record<string, unknown>, nextKey, out)
-    } else if (Array.isArray(value)) {
-      value.forEach((v) => out.append(nextKey, String(v)))
-    } else if (value !== undefined && value !== null) {
-      out.set(nextKey, String(value))
     }
   }
 }
