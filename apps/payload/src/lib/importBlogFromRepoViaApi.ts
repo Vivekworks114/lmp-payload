@@ -41,6 +41,40 @@ function authHeaders(options: ImportBlogViaApiOptions): Record<string, string> {
   return headers
 }
 
+/** Stay under Next.js / reverse-proxy body limits (~1–10MB default). */
+const CI_IMPORT_BATCH_MAX_BYTES = 3 * 1024 * 1024
+const CI_IMPORT_BATCH_MAX_POSTS = 15
+
+function estimatePostBytes(post: { filename: string; content: string }): number {
+  return Buffer.byteLength(post.filename, 'utf8') + Buffer.byteLength(post.content, 'utf8') + 64
+}
+
+function chunkPostsForCiImport(
+  posts: Array<{ filename: string; content: string }>,
+): Array<Array<{ filename: string; content: string }>> {
+  const batches: Array<Array<{ filename: string; content: string }>> = []
+  let current: Array<{ filename: string; content: string }> = []
+  let currentBytes = 256 // JSON wrapper overhead
+
+  for (const post of posts) {
+    const postBytes = estimatePostBytes(post)
+    const wouldExceedBytes = current.length > 0 && currentBytes + postBytes > CI_IMPORT_BATCH_MAX_BYTES
+    const wouldExceedCount = current.length >= CI_IMPORT_BATCH_MAX_POSTS
+
+    if (wouldExceedBytes || wouldExceedCount) {
+      batches.push(current)
+      current = []
+      currentBytes = 256
+    }
+
+    current.push(post)
+    currentBytes += postBytes
+  }
+
+  if (current.length > 0) batches.push(current)
+  return batches
+}
+
 /**
  * Import via CMS endpoint (overrideAccess) — works with DEPLOY_REPORT_TOKEN only.
  */
@@ -97,6 +131,35 @@ async function importBlogViaCiEndpoint(
   }
 }
 
+/** POST markdown in batches so large repos stay under request body limits. */
+async function importBlogViaCiEndpointBatched(
+  options: ImportBlogViaApiOptions,
+  posts: Array<{ filename: string; content: string }>,
+  onlyIfEmpty: boolean,
+): Promise<ImportBlogFromRepoResult & { skipped?: boolean; reason?: string }> {
+  const batches = chunkPostsForCiImport(posts)
+  let created = 0
+  let updated = 0
+
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i]!
+    const batchOnlyIfEmpty = onlyIfEmpty && i === 0
+    console.log(
+      `[import-blog-ci] batch ${i + 1}/${batches.length}: ${batch.length} file(s), ~${Math.round(
+        batch.reduce((sum, p) => sum + estimatePostBytes(p), 0) / 1024,
+      )}KB`,
+    )
+
+    const result = await importBlogViaCiEndpoint(options, batch, batchOnlyIfEmpty)
+    if (result.skipped) return result
+
+    created += result.created
+    updated += result.updated
+  }
+
+  return { created, updated, fileCount: posts.length, blogDir: '' }
+}
+
 /**
  * Import repo markdown/MDX into Payload over HTTPS (no direct Postgres).
  */
@@ -106,7 +169,7 @@ export async function importBlogFromRepoViaApi(
   const { blogDir, posts } = await readBlogPostsFromSite(options)
 
   if (options.deployReportToken) {
-    const result = await importBlogViaCiEndpoint(options, posts, false)
+    const result = await importBlogViaCiEndpointBatched(options, posts, false)
     if (result.skipped) {
       throw new Error(result.reason ?? 'Import skipped')
     }
@@ -188,7 +251,7 @@ export async function autoImportBlogIfEmptyViaApi(
       return { skipped: true, reason: `no .md or .mdx files in ${blogDir}` }
     }
 
-    const result = await importBlogViaCiEndpoint(options, posts, true)
+    const result = await importBlogViaCiEndpointBatched(options, posts, true)
     if (result.skipped) {
       return { skipped: true, reason: result.reason }
     }

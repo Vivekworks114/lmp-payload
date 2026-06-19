@@ -5,6 +5,11 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     reactCompiler: false,
+    // Large CI blog-import payloads (import-blog-content).
+    proxyClientMaxBodySize: '20mb',
+    serverActions: {
+      bodySizeLimit: '20mb',
+    },
   },
 }
 
