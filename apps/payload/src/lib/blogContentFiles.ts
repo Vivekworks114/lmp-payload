@@ -162,6 +162,14 @@ export function blogPostDataFromFile(
     : []
   const tags = Array.isArray(known.tags) ? (known.tags as string[]).map((value) => ({ value })) : []
 
+  const importExtra: Record<string, unknown> = { ...extra }
+  const excerpt = nonEmptyString(known.excerpt)
+  if (excerpt) importExtra.excerpt = excerpt
+  const featuredImage = nonEmptyString(known.featuredImage)
+  if (featuredImage) importExtra.featuredImage = featuredImage
+  const heroImage = nonEmptyString(known.heroImage)
+  if (heroImage) importExtra.heroImage = heroImage
+
   const fileSlug = sanitizeBlogSlug(slug)
   const postSlug = known.slug
     ? sanitizeBlogSlug(String(known.slug))
@@ -178,7 +186,7 @@ export function blogPostDataFromFile(
     author: known.author ? String(known.author) : undefined,
     categories,
     tags,
-    extra: Object.keys(extra).length ? extra : undefined,
+    extra: Object.keys(importExtra).length ? importExtra : undefined,
     content: markdownToLexicalState(body),
   }
 }

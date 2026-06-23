@@ -41,6 +41,7 @@ const RESERVED_FRONTMATTER_KEYS = new Set([
   'author',
   'heroImage',
   'featuredImage',
+  'excerpt',
   'categories',
   'tags',
   'slug',
@@ -67,6 +68,9 @@ export function formatBlogMarkdown(
     hero
   if (hero) frontmatter.heroImage = hero
   if (featured) frontmatter.featuredImage = featured
+  // WP / external Astro schemas often require excerpt (not just description).
+  const excerpt = extraStringField(doc.extra, 'excerpt') ?? doc.description
+  if (excerpt) frontmatter.excerpt = excerpt
   if (doc.categories?.length) {
     frontmatter.categories = doc.categories.map((c) => c.value).filter(Boolean)
   }
@@ -86,8 +90,13 @@ export function formatBlogMarkdown(
     frontmatter.date = pubDate ?? normalizeFrontmatterDate(doc.pubDate)
   }
 
-  const yaml = toYaml(frontmatter)
   const md = sanitizeMarkdownForAstro(lexicalToMarkdown(doc.content), { title: doc.title })
+  if (!frontmatter.featuredImage) {
+    const fromBody = firstImageFromMarkdown(md)
+    if (fromBody) frontmatter.featuredImage = fromBody
+  }
+
+  const yaml = toYaml(frontmatter)
   return {
     filename: `${slug}.${extension}`,
     body: `---\n${yaml}---\n\n${md}`,
@@ -121,6 +130,21 @@ function extraStringField(
   if (!extra) return undefined
   const v = extra[key]
   return typeof v === 'string' && v ? v : undefined
+}
+
+/** First markdown/HTML image src in post body (WP imports often embed images only in content). */
+function firstImageFromMarkdown(md: string): string | undefined {
+  const markdown = md.match(/!\[[^\]]*]\(([^)]+)\)/)
+  if (markdown?.[1]) {
+    const src = markdown[1].trim()
+    if (src) return src
+  }
+  const html = md.match(/<img[^>]+src=["']([^"']+)["']/i)
+  if (html?.[1]) {
+    const src = html[1].trim()
+    if (src) return src
+  }
+  return undefined
 }
 
 function normalizeFrontmatterDate(value: unknown): string | undefined {
