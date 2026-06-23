@@ -19,6 +19,8 @@ const KNOWN_KEYS = new Set([
   'author',
   'heroImage',
   'featuredImage',
+  'image',
+  'thumbnail',
   'categories',
   'tags',
   'slug',
@@ -167,6 +169,10 @@ export function blogPostDataFromFile(
   if (excerpt) importExtra.excerpt = excerpt
   const featuredImage = nonEmptyString(known.featuredImage)
   if (featuredImage) importExtra.featuredImage = featuredImage
+  const image = nonEmptyString(known.image)
+  if (image && !importExtra.featuredImage) importExtra.featuredImage = image
+  const thumbnail = nonEmptyString(known.thumbnail)
+  if (thumbnail && !importExtra.featuredImage) importExtra.featuredImage = thumbnail
   const heroImage = nonEmptyString(known.heroImage)
   if (heroImage) importExtra.heroImage = heroImage
 

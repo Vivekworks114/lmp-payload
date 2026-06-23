@@ -57,7 +57,16 @@ export async function syncTenantContent(opts: SyncOptions): Promise<{ blog: numb
     const docs = await client.findAll<Parameters<typeof formatBlogMarkdown>[0]>('blog-posts', {
       where: blogWhere,
     })
-    await Promise.all(docs.map((d) => writeFormatted(dir, formatBlogMarkdown(d, ext))))
+    const fallbackFeaturedImage =
+      (tenant as RawTenant).ogImage?.url ??
+      (tenant as RawTenant).logo?.url ??
+      (tenant as RawTenant).favicon?.url ??
+      null
+    await Promise.all(
+      docs.map((d) =>
+        writeFormatted(dir, formatBlogMarkdown(d, ext, { fallbackFeaturedImage })),
+      ),
+    )
     blogCount = docs.length
   }
 
