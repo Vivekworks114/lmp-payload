@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import type { TenantConfig, ThemeTokens } from '@astropayload/core'
@@ -7,6 +7,8 @@ import { PayloadClient, type PayloadClientOptions } from './client'
 import { liveBlogPostsWhere } from './blogPublishSchedule'
 import { buildWhereSearchParams } from './buildWhereParams'
 import { formatBlogMarkdown, type BlogFileExtension, type FormattedFile } from './formatters'
+import { parseYamlFrontmatter } from './formatters/parseFrontmatter'
+import { resolveBlogSlug } from './formatters/sanitizeBlogSlug'
 
 export interface SyncOptions extends PayloadClientOptions {
   /** Root of the tenant Astro app (e.g. apps/sites/keukenfaqs). */
@@ -41,6 +43,8 @@ export async function syncTenantContent(opts: SyncOptions): Promise<{ blog: numb
   if (opts.syncBlog !== false) {
     const blogRel = opts.blogContentPath?.replace(/^\/+/, '') || 'src/content/blog'
     const dir = path.join(siteRoot, blogRel)
+    const repoFrontmatterBySlug =
+      opts.clean !== false ? await readRepoFrontmatterBySlug(dir) : new Map()
     if (opts.clean !== false) await rm(dir, { recursive: true, force: true })
     await mkdir(dir, { recursive: true })
 
@@ -63,9 +67,16 @@ export async function syncTenantContent(opts: SyncOptions): Promise<{ blog: numb
       (tenant as RawTenant).favicon?.url ??
       null
     await Promise.all(
-      docs.map((d) =>
-        writeFormatted(dir, formatBlogMarkdown(d, ext, { fallbackFeaturedImage })),
-      ),
+      docs.map((d) => {
+        const slug = resolveBlogSlug(d.slug, d.title, d.id)
+        return writeFormatted(
+          dir,
+          formatBlogMarkdown(d, ext, {
+            fallbackFeaturedImage,
+            repoFrontmatter: repoFrontmatterBySlug.get(slug) ?? null,
+          }),
+        )
+      }),
     )
     blogCount = docs.length
   }
@@ -75,6 +86,39 @@ export async function syncTenantContent(opts: SyncOptions): Promise<{ blog: numb
 
 async function writeFormatted(dir: string, f: FormattedFile): Promise<void> {
   await writeFile(path.join(dir, f.filename), f.body, 'utf8')
+}
+
+/** Read existing git markdown frontmatter before clean sync wipes the blog folder. */
+async function readRepoFrontmatterBySlug(
+  dir: string,
+): Promise<Map<string, Record<string, unknown>>> {
+  const out = new Map<string, Record<string, unknown>>()
+  let entries: string[]
+  try {
+    entries = await readdir(dir)
+  } catch {
+    return out
+  }
+
+  for (const file of entries) {
+    if (!file.endsWith('.md') && !file.endsWith('.mdx')) continue
+    const slug = file.replace(/\.(md|mdx)$/, '')
+    if (!slug) continue
+    try {
+      const raw = await readFile(path.join(dir, file), 'utf8')
+      const { data } = parseYamlFrontmatter(raw)
+      if (Object.keys(data).length > 0) out.set(slug, data)
+    } catch {
+      /* skip unreadable files */
+    }
+  }
+
+  if (out.size > 0) {
+    console.log(
+      `[payload-sdk sync] preserving frontmatter from ${out.size} existing repo file(s) when Payload omits fields`,
+    )
+  }
+  return out
 }
 
 interface RawTenant {

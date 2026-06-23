@@ -35,6 +35,8 @@ export type BlogFileExtension = 'md' | 'mdx'
 export interface FormatBlogMarkdownOpts {
   /** Tenant ogImage/logo — used when a post has no featured image (WP-style required schemas). */
   fallbackFeaturedImage?: string | null
+  /** Frontmatter from the site's git markdown (used when Payload has not stored WP paths yet). */
+  repoFrontmatter?: Record<string, unknown> | null
 }
 
 /** Frontmatter keys owned by Payload — never overridden by `extra` on export. */
@@ -58,6 +60,8 @@ export function formatBlogMarkdown(
   extension: BlogFileExtension = 'md',
   opts?: FormatBlogMarkdownOpts,
 ): FormattedFile {
+  const extra = normalizeExtraRecord(doc.extra)
+  const repo = opts?.repoFrontmatter ?? null
   const pubDate = normalizeFrontmatterDate(doc.pubDate)
   const frontmatter: Record<string, unknown> = {
     title: doc.title,
@@ -67,17 +71,25 @@ export function formatBlogMarkdown(
   if (doc.updatedDate) frontmatter.updatedDate = normalizeFrontmatterDate(doc.updatedDate)
   if (doc.author) frontmatter.author = doc.author
   const hero =
-    imageFrontmatterFromMedia(doc.heroImage) ?? extraStringField(doc.extra, 'heroImage')
-  const featuredFromExtra = firstImageFromExtra(doc.extra)
+    imageFrontmatterFromMedia(doc.heroImage) ??
+    extraStringField(extra, 'heroImage') ??
+    extraStringField(repo, 'heroImage')
+  const featuredFromExtra = firstImageFromExtra(extra) ?? firstImageFromExtra(repo)
   const featured =
     imageFrontmatterFromMedia(doc.featuredImage) ??
-    extraStringField(doc.extra, 'featuredImage') ??
+    extraStringField(extra, 'featuredImage') ??
+    extraStringField(repo, 'featuredImage') ??
+    extraStringField(repo, 'featured_image') ??
+    extraStringField(repo, 'image') ??
     featuredFromExtra ??
     hero
   if (hero) frontmatter.heroImage = hero
   if (featured) frontmatter.featuredImage = featured
   // WP / external Astro schemas often require excerpt (not just description).
-  const excerpt = extraStringField(doc.extra, 'excerpt') ?? doc.description
+  const excerpt =
+    extraStringField(extra, 'excerpt') ??
+    extraStringField(repo, 'excerpt') ??
+    doc.description
   if (excerpt) frontmatter.excerpt = excerpt
   if (doc.categories?.length) {
     frontmatter.categories = doc.categories.map((c) => c.value).filter(Boolean)
@@ -85,9 +97,16 @@ export function formatBlogMarkdown(
   if (doc.tags?.length) {
     frontmatter.tags = doc.tags.map((t) => t.value).filter(Boolean)
   }
-  if (doc.extra && typeof doc.extra === 'object') {
-    for (const [k, v] of Object.entries(doc.extra)) {
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
       if (v === undefined || v === null || RESERVED_FRONTMATTER_KEYS.has(k)) continue
+      frontmatter[k] = v
+    }
+  }
+  if (repo) {
+    for (const [k, v] of Object.entries(repo)) {
+      if (v === undefined || v === null || RESERVED_FRONTMATTER_KEYS.has(k)) continue
+      if (frontmatter[k] !== undefined && frontmatter[k] !== null && frontmatter[k] !== '') continue
       frontmatter[k] = v
     }
   }
@@ -140,7 +159,26 @@ function extraStringField(
 ): string | undefined {
   if (!extra) return undefined
   const v = extra[key]
-  return typeof v === 'string' && v ? v : undefined
+  return typeof v === 'string' && v.trim() ? v.trim() : undefined
+}
+
+function normalizeExtraRecord(
+  extra: Record<string, unknown> | string | null | undefined,
+): Record<string, unknown> | null {
+  if (extra == null) return null
+  if (typeof extra === 'string') {
+    try {
+      const parsed = JSON.parse(extra) as unknown
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>
+      }
+    } catch {
+      return null
+    }
+    return null
+  }
+  if (typeof extra === 'object' && !Array.isArray(extra)) return extra
+  return null
 }
 
 /** First markdown/HTML image src in post body (WP imports often embed images only in content). */
