@@ -93,8 +93,12 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'platform-settings': PlatformSetting;
+  };
+  globalsSelect: {
+    'platform-settings': PlatformSettingsSelect<false> | PlatformSettingsSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -400,7 +404,7 @@ export interface BlogPost {
   slug: string;
   description: string;
   /**
-   * Draft = CMS only. Scheduled = goes live automatically when Pub date is reached (hourly cron). Published = live when Pub date is today or earlier.
+   * Draft = CMS only. Scheduled = CMS only until pub date (hourly cron promotes to Published and deploys). Published = included on live site when Pub date is today or earlier.
    */
   publishStatus: 'draft' | 'scheduled' | 'published';
   /**
@@ -409,11 +413,11 @@ export interface BlogPost {
   pubDate: string;
   updatedDate?: string | null;
   /**
-   * Main post image (synced as heroImage in markdown). Uploaded to R2 under tenants/<site-slug>/.
+   * Main post image. Synced as heroImage (and featuredImage when empty) in markdown — R2 CDN URL or local path.
    */
   heroImage?: (number | null) | Media;
   /**
-   * Optional card/listing image (synced as featuredImage). Use when the Astro site expects featuredImage instead of heroImage.
+   * Optional card/listing image. Synced as featuredImage in markdown. Falls back to Hero image when empty.
    */
   featuredImage?: (number | null) | Media;
   author?: string | null;
@@ -823,6 +827,36 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * CI/CD and platform defaults. Only super-admins can edit.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "platform-settings".
+ */
+export interface PlatformSetting {
+  id: number;
+  /**
+   * Where tenant pipelines run (deploy, import, scaffold, setup, scheduled publish). Jenkins requires JENKINS_URL, JENKINS_USER, JENKINS_API_TOKEN in server .env.
+   */
+  ciProvider: 'github_actions' | 'jenkins';
+  /**
+   * Jenkins job names are configured via server env (JENKINS_JOB_DEPLOY, etc.). See jenkins/README.md.
+   */
+  jenkinsNotes?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "platform-settings_select".
+ */
+export interface PlatformSettingsSelect<T extends boolean = true> {
+  ciProvider?: T;
+  jenkinsNotes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

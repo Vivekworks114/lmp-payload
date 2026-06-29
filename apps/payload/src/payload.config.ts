@@ -13,6 +13,7 @@ import { Users } from './collections/Users'
 import { BlogPosts } from './collections/BlogPosts'
 import { Media } from './collections/Media'
 import { GithubCredentials } from './collections/GithubCredentials'
+import { PlatformSettings } from './globals/PlatformSettings'
 import { isSuperAdmin } from './access/isSuperAdmin'
 import { ciGithubTokenEndpoint } from './endpoints/ciGithubToken'
 import { scheduledPublishEndpoint } from './endpoints/scheduledPublish'
@@ -54,6 +55,8 @@ export default buildConfig({
   },
 
   collections: [Tenants, Users, BlogPosts, Media, GithubCredentials],
+
+  globals: [PlatformSettings],
 
   endpoints: [ciGithubTokenEndpoint, scheduledPublishEndpoint],
 

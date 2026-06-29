@@ -1,10 +1,10 @@
 import type { PayloadRequest } from 'payload'
 
 import {
-  dispatchWorkflowResilient,
+  dispatchCiJob,
   isWorkflowUnexpectedInputsError,
-  workflowRunsUrl,
-} from './githubDispatch'
+  type CiDispatchResult,
+} from './ci/dispatchCiJob'
 import { parseGithubRepo, resolveDeployMode } from './parseGithubRepo'
 import { getTenantDeployTargetInfo, type DeployMode } from './tenantDeployTarget'
 import { tenantHasModule } from './tenantModules'
@@ -81,8 +81,6 @@ export async function dispatchTenantDeployWithPayload(
     }
   }
 
-  const workflow = tenant.githubWorkflow || 'tenant-deploy.yml'
-  const ghBranch = process.env.GITHUB_BRANCH ?? 'main'
   const fullInputs = {
     tenant_slug: tenant.slug,
     reason,
@@ -92,22 +90,26 @@ export async function dispatchTenantDeployWithPayload(
     blog_content_path: tenant.blogContentPath?.trim() || 'src/content/blog',
   }
 
-  const result = await dispatchWorkflowResilient({
-    workflow,
-    inputs: fullInputs,
-    legacyInputKeys: ['tenant_slug', 'reason'],
-  })
+  const result: CiDispatchResult = await dispatchCiJob(
+    {
+      job: 'tenant-deploy',
+      parameters: fullInputs,
+      legacyParameterKeys: ['tenant_slug', 'reason'],
+    },
+    payload,
+  )
 
-  const runsUrl = result.runUrl ?? workflowRunsUrl(workflow)
+  const runsUrl = result.runsUrl ?? result.runUrl
 
   if (!result.ok) {
+    const ghBranch = process.env.GITHUB_BRANCH ?? 'main'
     if (isWorkflowUnexpectedInputsError(result.status, result.error) && deployMode === 'external') {
       return {
         ok: false,
         status: 422,
         message:
-          `GitHub workflow "${workflow}" on branch "${ghBranch}" is outdated and does not accept external-repo inputs. ` +
-          'Push the latest `.github/workflows/tenant-deploy.yml` from this repo to GitHub (merge to main), then try again.',
+          `Deploy pipeline is outdated and does not accept external-repo inputs. ` +
+          `Update tenant-deploy on branch "${ghBranch}", then try again.`,
         runsUrl,
         runUrl: result.runUrl,
         error: result.error,
@@ -118,7 +120,7 @@ export async function dispatchTenantDeployWithPayload(
     return {
       ok: false,
       status: result.status,
-      message: result.error ?? 'GitHub dispatch failed.',
+      message: result.error ?? 'CI dispatch failed.',
       runsUrl,
       runUrl: result.runUrl,
       error: result.error,

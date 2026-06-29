@@ -3,7 +3,7 @@ import type { Endpoint, PayloadRequest } from 'payload'
 import { canPublishTenantRequest } from '../access/canPublishTenant'
 import { isSuperAdmin } from '../access/isSuperAdmin'
 import { dispatchTenantDeploy } from '../lib/dispatchTenantDeploy'
-import { dispatchWorkflow, workflowRunsUrl } from '../lib/githubDispatch'
+import { dispatchCiJob } from '../lib/ci/dispatchCiJob'
 
 /**
  *   POST /api/tenants/:id/scaffold  — super-admin, opens scaffold PR
@@ -112,18 +112,21 @@ export const scaffoldEndpoint: Endpoint = {
       )
     }
 
-    const result = await dispatchWorkflow({
-      workflow: 'tenant-scaffold.yml',
-      inputs: {
-        tenant_slug: tenant.slug,
-        tenant_domain: tenant.domain,
-        tenant_name: tenant.name,
+    const result = await dispatchCiJob(
+      {
+        job: 'tenant-scaffold',
+        parameters: {
+          tenant_slug: tenant.slug,
+          tenant_domain: tenant.domain,
+          tenant_name: tenant.name,
+        },
       },
-    })
-    const runsUrl = result.runUrl ?? workflowRunsUrl('tenant-scaffold.yml')
+      req.payload,
+    )
+    const runsUrl = result.runsUrl ?? result.runUrl
     if (!result.ok) {
       return json(
-        { ok: false, message: result.error ?? 'GitHub dispatch failed.', runsUrl, runUrl: result.runUrl },
+        { ok: false, message: result.error ?? 'CI dispatch failed.', runsUrl, runUrl: result.runUrl },
         result.status,
       )
     }

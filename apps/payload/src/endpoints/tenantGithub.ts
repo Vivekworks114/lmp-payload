@@ -1,7 +1,7 @@
 import type { Endpoint, PayloadRequest } from 'payload'
 
 import { isSuperAdmin } from '../access/isSuperAdmin'
-import { dispatchWorkflow, workflowRunsUrl } from '../lib/githubDispatch'
+import { dispatchCiJob } from '../lib/ci/dispatchCiJob'
 import { parseGithubRepo } from '../lib/parseGithubRepo'
 import { validateGithubRepository } from '../lib/githubRepoApi'
 import {
@@ -131,23 +131,25 @@ export const setupGithubRepoEndpoint: Endpoint = {
       return json({ ok: false, message: 'Set a valid GitHub repository first.' }, 400)
     }
 
-    const workflow = 'tenant-repo-setup.yml'
-    const result = await dispatchWorkflow({
-      workflow,
-      inputs: {
-        tenant_slug: tenant.slug,
-        github_repo: parsed.full,
-        github_branch: tenant.githubBranch?.trim() || 'main',
-        blog_content_path: tenant.blogContentPath?.trim() || 'src/content/blog',
+    const result = await dispatchCiJob(
+      {
+        job: 'tenant-repo-setup',
+        parameters: {
+          tenant_slug: tenant.slug,
+          github_repo: parsed.full,
+          github_branch: tenant.githubBranch?.trim() || 'main',
+          blog_content_path: tenant.blogContentPath?.trim() || 'src/content/blog',
+        },
       },
-    })
+      req.payload,
+    )
 
     if (!result.ok) {
       return json(
         {
           ok: false,
-          message: result.error ?? 'Failed to start setup workflow.',
-          runsUrl: workflowRunsUrl(workflow),
+          message: result.error ?? 'Failed to start setup pipeline.',
+          runsUrl: result.runsUrl,
         },
         result.status,
       )
@@ -167,7 +169,7 @@ export const setupGithubRepoEndpoint: Endpoint = {
       ok: true,
       message: `Setup workflow started. A pull request will be opened on ${parsed.full}.`,
       runUrl: result.runUrl,
-      runsUrl: result.runUrl ?? workflowRunsUrl(workflow),
+      runsUrl: result.runUrl ?? result.runsUrl,
     })
   },
 }
@@ -200,23 +202,25 @@ export const importBlogFromRepoEndpoint: Endpoint = {
       )
     }
 
-    const workflow = 'tenant-import-blog.yml'
-    const result = await dispatchWorkflow({
-      workflow,
-      inputs: {
-        tenant_slug: tenant.slug,
-        github_repo: parsed.full,
-        github_branch: tenant.githubBranch?.trim() || 'main',
-        blog_content_path: tenant.blogContentPath?.trim() || 'src/content/blog',
+    const result = await dispatchCiJob(
+      {
+        job: 'tenant-import-blog',
+        parameters: {
+          tenant_slug: tenant.slug,
+          github_repo: parsed.full,
+          github_branch: tenant.githubBranch?.trim() || 'main',
+          blog_content_path: tenant.blogContentPath?.trim() || 'src/content/blog',
+        },
       },
-    })
+      req.payload,
+    )
 
     if (!result.ok) {
       return json(
         {
           ok: false,
-          message: result.error ?? 'Failed to start import workflow.',
-          runsUrl: workflowRunsUrl(workflow),
+          message: result.error ?? 'Failed to start import pipeline.',
+          runsUrl: result.runsUrl,
         },
         result.status,
       )
@@ -226,7 +230,7 @@ export const importBlogFromRepoEndpoint: Endpoint = {
       ok: true,
       message: `One-time import started from ${parsed.full}. Existing Payload posts with the same slug are updated.`,
       runUrl: result.runUrl,
-      runsUrl: result.runUrl ?? workflowRunsUrl(workflow),
+      runsUrl: result.runUrl ?? result.runsUrl,
     })
   },
 }
