@@ -126,5 +126,6 @@ After Jenkins is verified, disable or remove `.github/workflows/*.yml` triggers 
 | 403 on client checkout | Link tenant GitHub credential or set `EXTERNAL_REPO_GITHUB_TOKEN` |
 | Job not found | Match `JENKINS_JOB_*` env to Jenkins job names |
 | `tenant-deploy is not parameterized` | Run each Pipeline job **Build Now** once so Jenkins loads parameters from the Jenkinsfile; then **Build with Parameters** appears and Payload can trigger deploys |
+| `github.com/https://github.com/...` on clone | `github_repo` must be `owner/repo` (Payload sends this automatically); if testing manually, use `Vivekworks114/cosmeticaspecialisten` not the full URL |
 | `ERROR: astropayload-…` | Create the missing **Secret text** credential ID from section 4 (exact spelling) |
 | Crumb / CSRF errors | `jenkinsDispatch.ts` sends Jenkins crumb automatically |
