@@ -6,12 +6,25 @@ PLATFORM_DIR="${PLATFORM_DIR:-platform}"
 PLATFORM_GIT_URL="${PLATFORM_GIT_URL:-}"
 PLATFORM_GIT_BRANCH="${PLATFORM_GIT_BRANCH:-main}"
 PLATFORM_GIT_TOKEN="${PLATFORM_GIT_TOKEN:-${GITHUB_TOKEN:-}}"
+WORKSPACE="${WORKSPACE:-$(pwd)}"
+
+cd "$WORKSPACE"
+
+# Jenkins Pipeline from SCM: workspace is already the platform repo — reuse it.
+if [ -f "pnpm-workspace.yaml" ] && [ -d "apps/payload" ] && [ -d "jenkins/scripts" ]; then
+  if [ "$PLATFORM_DIR" != "." ]; then
+    rm -rf "$PLATFORM_DIR"
+    ln -sfn "$WORKSPACE" "$PLATFORM_DIR"
+  fi
+  echo "Reusing Jenkins workspace as platform ($PLATFORM_DIR -> $WORKSPACE)"
+  exit 0
+fi
 
 if [ -z "$PLATFORM_GIT_URL" ]; then
   OWNER="${GITHUB_OWNER:-}"
   REPO="${GITHUB_REPO:-astropayload}"
   if [ -z "$OWNER" ]; then
-    echo "Set PLATFORM_GIT_URL or GITHUB_OWNER + GITHUB_REPO" >&2
+    echo "Set PLATFORM_GIT_URL or GITHUB_OWNER + GITHUB_REPO (or run from a checked-out astropayload workspace)" >&2
     exit 1
   fi
   PLATFORM_GIT_URL="https://github.com/${OWNER}/${REPO}.git"

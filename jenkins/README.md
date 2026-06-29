@@ -90,13 +90,15 @@ Create these under **Manage Jenkins → Credentials** as **Secret text** (unless
 
 Optional: set global env `PAYLOAD_API_KEY` on Jenkins if you prefer API key auth over `DEPLOY_REPORT_TOKEN` (not required when the report token is set).
 
-Also set **Manage Jenkins → System → Global properties → Environment variables** (if not in Payload `.env`):
+Optional: set global env on Jenkins (only needed if scripts run outside Pipeline-from-SCM):
 
 | Name | Example |
 |------|---------|
 | `GITHUB_OWNER` | `zbseollp` |
 | `GITHUB_REPO` | `astropayload` |
 | `PLATFORM_GIT_BRANCH` | `jenkins` |
+
+When the job uses **Pipeline script from SCM**, Jenkins already checks out the repo — no extra clone env vars required.
 
 ## 5. Jenkins agent requirements
 
