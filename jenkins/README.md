@@ -102,9 +102,9 @@ When the job uses **Pipeline script from SCM**, Jenkins already checks out the r
 
 ## 5. Jenkins agent requirements
 
-- Node.js 22 + corepack/pnpm 9
-- git
-- Network access to GitHub + Payload CMS + Cloudflare
+- **git** and **curl** (Node/pnpm are installed automatically by `jenkins/scripts/setup-node-pnpm.sh` on first run)
+- Network access to GitHub, nodejs.org, Payload CMS, and Cloudflare
+- Optional: preinstall Node 22 + pnpm 9 to skip the download step
 
 ## 6. Client repo tokens
 

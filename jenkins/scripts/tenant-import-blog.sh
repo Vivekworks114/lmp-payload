@@ -18,7 +18,8 @@ bash "$SCRIPT_DIR/resolve-client-github-token.sh"
 bash "$SCRIPT_DIR/checkout-client-repo.sh"
 
 cd "$WORKSPACE/platform"
-corepack enable 2>/dev/null || true
+bash "$SCRIPT_DIR/setup-node-pnpm.sh"
+source "$SCRIPT_DIR/load-node-pnpm.sh"
 pnpm install --frozen-lockfile
 
 pnpm --filter @astropayload/payload import:blog-from-repo-api -- \

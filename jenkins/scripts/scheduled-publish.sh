@@ -16,7 +16,8 @@ cd "$WORKSPACE"
 
 bash "$SCRIPT_DIR/checkout-platform.sh"
 cd platform
-corepack enable 2>/dev/null || true
+bash "$SCRIPT_DIR/setup-node-pnpm.sh"
+source "$SCRIPT_DIR/load-node-pnpm.sh"
 pnpm install --frozen-lockfile
 
 cd apps/payload

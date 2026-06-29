@@ -27,7 +27,9 @@ bash "$SCRIPT_DIR/checkout-platform.sh"
 PLATFORM="$WORKSPACE/platform"
 cd "$PLATFORM"
 
-corepack enable 2>/dev/null || true
+bash "$SCRIPT_DIR/setup-node-pnpm.sh"
+# shellcheck source=load-node-pnpm.sh
+source "$SCRIPT_DIR/load-node-pnpm.sh"
 pnpm install --frozen-lockfile
 
 if [ "$DEPLOY_MODE" = "external" ] && [ -n "$GITHUB_REPO" ]; then

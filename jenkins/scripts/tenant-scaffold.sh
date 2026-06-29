@@ -43,7 +43,8 @@ if [ -d "apps/sites/${TENANT_SLUG}" ]; then
   exit 1
 fi
 
-corepack enable 2>/dev/null || true
+bash "$SCRIPT_DIR/setup-node-pnpm.sh"
+source "$SCRIPT_DIR/load-node-pnpm.sh"
 pnpm install --frozen-lockfile
 
 if [ -n "$PAYLOAD_URL" ] && [ -n "$DEPLOY_REPORT_TOKEN" ] && [ -n "$RUN_URL" ]; then
