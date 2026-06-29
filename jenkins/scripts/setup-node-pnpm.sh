@@ -27,11 +27,11 @@ esac
 
 NODE_DIR="$TOOLS_DIR/node-v${NODE_VERSION}-linux-${NODE_ARCH}"
 if [ ! -x "$NODE_DIR/bin/node" ]; then
-  TAR="node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz"
+  TAR="node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.gz"
   URL="https://nodejs.org/dist/v${NODE_VERSION}/${TAR}"
   echo "Installing Node.js ${NODE_VERSION} (${NODE_ARCH}) from nodejs.org"
   curl -fsSL "$URL" -o "$TOOLS_DIR/${TAR}"
-  tar -xJf "$TOOLS_DIR/${TAR}" -C "$TOOLS_DIR"
+  tar -xzf "$TOOLS_DIR/${TAR}" -C "$TOOLS_DIR"
   rm -f "$TOOLS_DIR/${TAR}"
 fi
 
