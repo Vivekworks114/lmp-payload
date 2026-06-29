@@ -21,6 +21,22 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
+HTTP_CODE="$(curl -sS -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/${GITHUB_REPO}" || echo "000")"
+
+if [ "$HTTP_CODE" != "200" ]; then
+  echo "ERROR: GitHub token cannot access ${GITHUB_REPO} (HTTP ${HTTP_CODE})." >&2
+  echo "  Token source: ${CLIENT_GITHUB_TOKEN_SOURCE:-unknown}" >&2
+  echo "  Tenant slug:  ${TENANT:-${tenant_slug:-<not set>}}" >&2
+  if [ "$HTTP_CODE" = "404" ]; then
+    echo "  Fix: In Payload admin, open the tenant → GitHub tab → link a PAT with read access to this repo." >&2
+    echo "       When testing in Jenkins manually, tenant_slug must match the Payload tenant slug." >&2
+  fi
+  exit 1
+fi
+
 rm -rf "$SITE_DIR"
 git clone --depth 1 --branch "$GITHUB_BRANCH" \
   "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPO}.git" \
