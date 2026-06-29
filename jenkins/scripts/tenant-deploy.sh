@@ -63,6 +63,16 @@ if [ "$DEPLOY_MODE" = "external" ]; then
   pnpm tenant-cli sync --slug "$TENANT" --site "$SITE_ROOT" --blog-path "$BLOG_CONTENT_PATH"
 
   cd "$SITE_ROOT"
+  export CI=true
+  export CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN:-}"
+  export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-}"
+
+  if [ ! -f wrangler.toml ] && [ ! -f wrangler.json ] && [ ! -f wrangler.jsonc ]; then
+    echo "ERROR: Client repo is missing wrangler.toml (or wrangler.jsonc)." >&2
+    echo "  Add Cloudflare Workers config + @astrojs/cloudflare before CI deploy." >&2
+    exit 1
+  fi
+
   if [ -f pnpm-lock.yaml ]; then
     pnpm install --frozen-lockfile
     PKG=pnpm
@@ -77,9 +87,19 @@ if [ "$DEPLOY_MODE" = "external" ]; then
   export TENANT
   if [ "$PKG" = "pnpm" ]; then pnpm run build; else npm run build; fi
 
+  # Deploy only — do not run "npm run deploy" (may re-build or trigger wrangler init).
+  set -o pipefail
   if [ "$PKG" = "pnpm" ]; then
-    pnpm exec wrangler deploy 2>&1 | tee deploy.log || pnpm add -D wrangler@^4.84.0 && pnpm exec wrangler deploy 2>&1 | tee deploy.log
+    if ! pnpm exec wrangler --version >/dev/null 2>&1; then
+      echo "Installing wrangler (missing from client package.json)"
+      pnpm add -D wrangler@^4.84.0
+    fi
+    pnpm exec wrangler deploy 2>&1 | tee deploy.log
   else
+    if ! npx wrangler --version >/dev/null 2>&1; then
+      echo "Installing wrangler (missing from client package.json)"
+      npm install -D wrangler@^4.84.0
+    fi
     npx wrangler deploy 2>&1 | tee deploy.log
   fi
   WORKERS_URL="$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | tail -1 || true)"
