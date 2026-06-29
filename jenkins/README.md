@@ -49,7 +49,15 @@ Also set existing vars: `DEPLOY_REPORT_TOKEN`, `PAYLOAD_URL`, `EXTERNAL_REPO_GIT
 3. Set **CI provider** → **Jenkins**
 4. Save
 
-(Or rely on `CI_PROVIDER=jenkins` in `.env`.)
+If the admin shows `relation "platform_settings" does not exist`, run on the Payload VPS:
+
+```sh
+cd /var/www/astropayload
+psql "$DATABASE_URI" -f apps/payload/scripts/sync-prod-schema.sql
+pm2 restart payload
+```
+
+(Or rely on `CI_PROVIDER=jenkins` in `.env` until the global is migrated.)
 
 ## 3. Create Jenkins jobs
 

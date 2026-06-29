@@ -117,3 +117,50 @@ BEGIN
 END $$;
 
 CREATE INDEX IF NOT EXISTS blog_posts_featured_image_id_idx ON blog_posts (featured_image_id);
+
+-- Platform settings global (CI provider: GitHub Actions vs Jenkins)
+CREATE TABLE IF NOT EXISTS platform_settings (
+  id serial PRIMARY KEY,
+  ci_provider varchar NOT NULL DEFAULT 'github_actions',
+  jenkins_notes varchar,
+  updated_at timestamptz DEFAULT now() NOT NULL,
+  created_at timestamptz DEFAULT now() NOT NULL
+);
+
+INSERT INTO platform_settings (ci_provider, created_at, updated_at)
+SELECT 'github_actions', now(), now()
+WHERE NOT EXISTS (SELECT 1 FROM platform_settings);
+
+ALTER TABLE payload_locked_documents_rels
+  ADD COLUMN IF NOT EXISTS platform_settings_id integer;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'payload_locked_documents_rels_platform_settings_fk'
+  ) THEN
+    ALTER TABLE payload_locked_documents_rels
+      ADD CONSTRAINT payload_locked_documents_rels_platform_settings_fk
+      FOREIGN KEY (platform_settings_id) REFERENCES platform_settings (id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS payload_locked_documents_rels_platform_settings_id_idx
+  ON payload_locked_documents_rels (platform_settings_id);
+
+ALTER TABLE IF EXISTS payload_preferences_rels
+  ADD COLUMN IF NOT EXISTS platform_settings_id integer;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'payload_preferences_rels_platform_settings_fk'
+  ) THEN
+    ALTER TABLE payload_preferences_rels
+      ADD CONSTRAINT payload_preferences_rels_platform_settings_fk
+      FOREIGN KEY (platform_settings_id) REFERENCES platform_settings (id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS payload_preferences_rels_platform_settings_id_idx
+  ON payload_preferences_rels (platform_settings_id);
