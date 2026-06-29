@@ -16,7 +16,7 @@ pipeline {
   environment {
     PAYLOAD_URL = credentials('astropayload-payload-url')
     DEPLOY_REPORT_TOKEN = credentials('astropayload-deploy-report-token')
-    PAYLOAD_API_KEY = credentials('astropayload-payload-api-key')
+    PAYLOAD_API_KEY = "${env.PAYLOAD_API_KEY ?: ''}"
     PLATFORM_GIT_TOKEN = credentials('astropayload-platform-github-token')
     GH_TOKEN = credentials('astropayload-platform-github-token')
     GITHUB_OWNER = "${env.GITHUB_OWNER ?: ''}"
@@ -44,19 +44,21 @@ pipeline {
 
   post {
     failure {
-      sh """
-        if [ -n "\${PAYLOAD_URL:-}" ] && [ -n "\${DEPLOY_REPORT_TOKEN:-}" ] && { [ -d platform ] || [ -f pnpm-workspace.yaml ]; }; then
-          ROOT="\$(git rev-parse --show-toplevel 2>/dev/null || echo platform)"
-          cd "\$ROOT"
-          corepack enable 2>/dev/null || true
-          pnpm --filter @astropayload/payload report:deploy -- \
-            --kind scaffold \
-            --slug '${params.tenant_slug}' \
-            --status failure \
-            --run-url "\${BUILD_URL}" \
-            --error "See Jenkins build log" || true
-        fi
-      """
+      node {
+        sh """
+          if [ -n "\${PAYLOAD_URL:-}" ] && [ -n "\${DEPLOY_REPORT_TOKEN:-}" ] && { [ -d platform ] || [ -f pnpm-workspace.yaml ]; }; then
+            ROOT="\$(git rev-parse --show-toplevel 2>/dev/null || echo platform)"
+            cd "\$ROOT"
+            corepack enable 2>/dev/null || true
+            pnpm --filter @astropayload/payload report:deploy -- \
+              --kind scaffold \
+              --slug '${params.tenant_slug}' \
+              --status failure \
+              --run-url "\${BUILD_URL}" \
+              --error "See Jenkins build log" || true
+          fi
+        """
+      }
     }
   }
 }

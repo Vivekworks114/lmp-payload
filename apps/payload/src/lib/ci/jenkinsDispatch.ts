@@ -140,10 +140,14 @@ export async function dispatchJenkinsJob(
 
   if (res.status !== 201 && res.status !== 200 && res.status !== 302) {
     const text = await res.text().catch(() => '')
+    const notParameterized =
+      res.status === 400 && /not parameterized/i.test(text)
     return {
       ok: false,
       status: res.status,
-      error: `Jenkins returned ${res.status}: ${text.slice(0, 500) || res.statusText}`,
+      error: notParameterized
+        ? `Jenkins job "${jobName}" is not parameterized yet. Open the job in Jenkins, run "Build Now" once (so the Jenkinsfile parameters load), then retry from Payload.`
+        : `Jenkins returned ${res.status}: ${text.slice(0, 500) || res.statusText}`,
       runsUrl,
     }
   }

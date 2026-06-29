@@ -77,15 +77,26 @@ For `scheduled-publish`, the Jenkinsfile includes `cron('0 * * * *')` — enable
 
 ## 4. Jenkins credentials (IDs must match Jenkinsfiles)
 
-| Credential ID | Type | Value |
-|---------------|------|--------|
-| `astropayload-payload-url` | Secret text | `https://payload.10beste.com` |
-| `astropayload-deploy-report-token` | Secret text | Same as Payload `DEPLOY_REPORT_TOKEN` |
-| `astropayload-payload-api-key` | Secret text | Super-admin API key (optional) |
-| `astropayload-external-repo-github-token` | Secret text | Fallback PAT for client repos |
-| `astropayload-platform-github-token` | Secret text | Read access to astropayload repo |
-| `astropayload-cloudflare-api-token` | Secret text | Wrangler deploy |
-| `astropayload-cloudflare-account-id` | Secret text | Cloudflare account |
+Create these under **Manage Jenkins → Credentials** as **Secret text** (unless noted):
+
+| Credential ID | Required | Value |
+|---------------|----------|--------|
+| `astropayload-payload-url` | yes | `https://payload.10beste.com` |
+| `astropayload-deploy-report-token` | yes | Same as Payload `DEPLOY_REPORT_TOKEN` |
+| `astropayload-external-repo-github-token` | yes (external deploy) | Fallback PAT for client repos |
+| `astropayload-platform-github-token` | yes | GitHub PAT — read for clone, write for scaffold PRs |
+| `astropayload-cloudflare-api-token` | yes (deploy) | Wrangler deploy |
+| `astropayload-cloudflare-account-id` | yes (deploy) | Cloudflare account |
+
+Optional: set global env `PAYLOAD_API_KEY` on Jenkins if you prefer API key auth over `DEPLOY_REPORT_TOKEN` (not required when the report token is set).
+
+Also set **Manage Jenkins → System → Global properties → Environment variables** (if not in Payload `.env`):
+
+| Name | Example |
+|------|---------|
+| `GITHUB_OWNER` | `zbseollp` |
+| `GITHUB_REPO` | `astropayload` |
+| `PLATFORM_GIT_BRANCH` | `jenkins` |
 
 ## 5. Jenkins agent requirements
 
@@ -112,4 +123,6 @@ After Jenkins is verified, disable or remove `.github/workflows/*.yml` triggers 
 | `Jenkins is not configured` | Set `JENKINS_URL`, `JENKINS_USER`, `JENKINS_API_TOKEN` on Payload VPS |
 | 403 on client checkout | Link tenant GitHub credential or set `EXTERNAL_REPO_GITHUB_TOKEN` |
 | Job not found | Match `JENKINS_JOB_*` env to Jenkins job names |
+| `tenant-deploy is not parameterized` | Run each Pipeline job **Build Now** once so Jenkins loads parameters from the Jenkinsfile; then **Build with Parameters** appears and Payload can trigger deploys |
+| `ERROR: astropayload-…` | Create the missing **Secret text** credential ID from section 4 (exact spelling) |
 | Crumb / CSRF errors | `jenkinsDispatch.ts` sends Jenkins crumb automatically |
