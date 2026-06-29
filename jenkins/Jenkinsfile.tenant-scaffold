@@ -41,24 +41,4 @@ pipeline {
       }
     }
   }
-
-  post {
-    failure {
-      node {
-        sh """
-          if [ -n "\${PAYLOAD_URL:-}" ] && [ -n "\${DEPLOY_REPORT_TOKEN:-}" ] && { [ -d platform ] || [ -f pnpm-workspace.yaml ]; }; then
-            ROOT="\$(git rev-parse --show-toplevel 2>/dev/null || echo platform)"
-            cd "\$ROOT"
-            corepack enable 2>/dev/null || true
-            pnpm --filter @astropayload/payload report:deploy -- \
-              --kind scaffold \
-              --slug '${params.tenant_slug}' \
-              --status failure \
-              --run-url "\${BUILD_URL}" \
-              --error "See Jenkins build log" || true
-          fi
-        """
-      }
-    }
-  }
 }

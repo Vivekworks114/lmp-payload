@@ -40,22 +40,4 @@ pipeline {
       }
     }
   }
-
-  post {
-    failure {
-      node {
-        sh """
-          if [ -n "\${PAYLOAD_URL:-}" ] && [ -n "\${DEPLOY_REPORT_TOKEN:-}" ] && [ -d platform ]; then
-            cd platform
-            corepack enable 2>/dev/null || true
-            pnpm --filter @astropayload/payload report:deploy -- \
-              --slug '${params.tenant_slug}' \
-              --status failure \
-              --run-url "\${BUILD_URL}" \
-              --error "See Jenkins build log" || true
-          fi
-        """
-      }
-    }
-  }
 }
