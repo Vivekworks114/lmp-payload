@@ -3,6 +3,7 @@
 import { useDocumentInfo } from '@payloadcms/ui'
 import { useState } from 'react'
 
+import { ciTrackBuildLabel, ciViewRunsLabel, type CiProviderId } from '../lib/ci/ciBuildLinks'
 import { DeployTargetBadge } from './DeployTargetBadge.client'
 import { publishResultBox } from './publishPanelStyles'
 import { useTenantDeployTarget } from './useTenantDeployTarget'
@@ -12,6 +13,7 @@ type ApiResult = {
   message: string
   runsUrl?: string | null
   runUrl?: string | null
+  ciProvider?: CiProviderId
   deployMode?: 'monorepo' | 'external'
   deployTarget?: string
 }
@@ -48,6 +50,7 @@ export function TenantActions(): React.ReactElement {
               : `Request failed: ${res.status} ${res.statusText}`,
         runsUrl: body.runsUrl ?? null,
         runUrl: body.runUrl ?? null,
+        ciProvider: body.ciProvider,
         deployMode: body.deployMode,
         deployTarget: body.deployTarget,
       })
@@ -154,13 +157,13 @@ export function TenantActions(): React.ReactElement {
           {result.runUrl ? (
             <div style={{ marginTop: 8 }}>
               <a href={result.runUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 500 }}>
-                Track build on GitHub →
+                {ciTrackBuildLabel(result.ciProvider, result.runUrl)}
               </a>
             </div>
           ) : result.runsUrl ? (
             <div style={{ marginTop: 8 }}>
               <a href={result.runsUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 500 }}>
-                View workflow runs on GitHub →
+                {ciViewRunsLabel(result.ciProvider, result.runsUrl)}
               </a>
             </div>
           ) : null}

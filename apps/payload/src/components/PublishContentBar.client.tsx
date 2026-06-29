@@ -3,6 +3,7 @@
 import { useAuth } from '@payloadcms/ui'
 import { useCallback, useEffect, useState } from 'react'
 
+import { ciTrackBuildLabel, type CiProviderId } from '../lib/ci/ciBuildLinks'
 import { DeployTargetBadge } from './DeployTargetBadge.client'
 import {
   publishPanelCard,
@@ -17,6 +18,7 @@ type PublishResult = {
   ok: boolean
   message: string
   runUrl?: string | null
+  ciProvider?: CiProviderId
 }
 
 function readTenantIdFromCookie(): string | undefined {
@@ -83,6 +85,7 @@ export function PublishContentBar(): React.ReactElement | null {
               ? 'The live site updates when CI finishes (~2 minutes).'
               : `Publish failed: ${res.status} ${res.statusText}`,
         runUrl: body.runUrl ?? null,
+        ciProvider: body.ciProvider,
       })
       if (body.ok) refresh()
     } catch (err) {
@@ -157,7 +160,7 @@ export function PublishContentBar(): React.ReactElement | null {
           {result.runUrl ? (
             <div style={{ marginTop: 8 }}>
               <a href={result.runUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 500 }}>
-                Track build on GitHub →
+                {ciTrackBuildLabel(result.ciProvider, result.runUrl)}
               </a>
             </div>
           ) : null}

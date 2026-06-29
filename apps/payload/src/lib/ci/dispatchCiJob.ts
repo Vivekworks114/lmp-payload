@@ -28,7 +28,8 @@ export async function dispatchCiJob(
   const provider = await resolveCiProvider(payload)
 
   if (provider === 'jenkins') {
-    return dispatchJenkinsJob(opts.job, opts.parameters)
+    const result = await dispatchJenkinsJob(opts.job, opts.parameters)
+    return { ...result, ciProvider: provider }
   }
 
   const workflow = githubWorkflowForJob(opts.job)
@@ -46,6 +47,7 @@ export async function dispatchCiJob(
     runUrl: result.runUrl,
     runsUrl: result.runUrl ?? workflowRunsUrl(workflow),
     usedLegacyWorkflowInputs: result.usedLegacyWorkflowInputs,
+    ciProvider: provider,
   }
 }
 

@@ -3,6 +3,13 @@
 # Order: Payload /api/ci/github-token (tenant credential) → EXTERNAL_REPO_GITHUB_TOKEN → GITHUB_TOKEN
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! command -v node >/dev/null 2>&1; then
+  bash "$SCRIPT_DIR/setup-node-pnpm.sh"
+  # shellcheck source=load-node-pnpm.sh
+  source "$SCRIPT_DIR/load-node-pnpm.sh"
+fi
+
 TENANT="${TENANT:-${tenant_slug:-}}"
 TOKEN=""
 TOKEN_SOURCE=""

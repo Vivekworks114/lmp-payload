@@ -16,6 +16,7 @@ type JsonBody = {
   notes?: string[]
   runsUrl?: string | null
   runUrl?: string | null
+  ciProvider?: 'jenkins' | 'github_actions'
 }
 
 function json(body: JsonBody, status = 200): Response {
@@ -170,6 +171,7 @@ export const setupGithubRepoEndpoint: Endpoint = {
       message: `Setup workflow started. A pull request will be opened on ${parsed.full}.`,
       runUrl: result.runUrl,
       runsUrl: result.runUrl ?? result.runsUrl,
+      ciProvider: result.ciProvider,
     })
   },
 }
@@ -231,6 +233,7 @@ export const importBlogFromRepoEndpoint: Endpoint = {
       message: `One-time import started from ${parsed.full}. Existing Payload posts with the same slug are updated.`,
       runUrl: result.runUrl,
       runsUrl: result.runUrl ?? result.runsUrl,
+      ciProvider: result.ciProvider,
     })
   },
 }

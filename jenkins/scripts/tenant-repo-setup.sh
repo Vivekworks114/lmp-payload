@@ -22,7 +22,11 @@ WORKSPACE="${WORKSPACE:-$(pwd)}"
 cd "$WORKSPACE"
 
 bash "$SCRIPT_DIR/checkout-platform.sh"
-export GH_FALLBACK_TOKEN="${EXTERNAL_REPO_GITHUB_TOKEN:-}"
+PLATFORM="$WORKSPACE/platform"
+
+bash "$SCRIPT_DIR/setup-node-pnpm.sh"
+source "$SCRIPT_DIR/load-node-pnpm.sh"
+
 export GH_FALLBACK_TOKEN="${EXTERNAL_REPO_GITHUB_TOKEN:-}"
 # shellcheck source=resolve-client-github-token.sh
 source "$SCRIPT_DIR/resolve-client-github-token.sh"
@@ -81,8 +85,6 @@ else
 fi
 
 cd "$WORKSPACE/platform"
-bash "$SCRIPT_DIR/setup-node-pnpm.sh"
-source "$SCRIPT_DIR/load-node-pnpm.sh"
 pnpm install --frozen-lockfile
 
 if [ -n "$PR_URL" ]; then

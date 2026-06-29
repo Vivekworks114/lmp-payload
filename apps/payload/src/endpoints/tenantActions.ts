@@ -16,6 +16,7 @@ type JsonResponse = {
   message: string
   runsUrl?: string | null
   runUrl?: string | null
+  ciProvider?: 'jenkins' | 'github_actions'
   deployMode?: 'monorepo' | 'external'
   deployTarget?: string
 }
@@ -85,6 +86,7 @@ export const publishEndpoint: Endpoint = {
         message: result.message,
         runsUrl: result.runsUrl,
         runUrl: result.runUrl,
+        ciProvider: result.ciProvider,
         deployMode: result.deployMode,
         deployTarget: result.deployTarget,
       },
@@ -126,7 +128,13 @@ export const scaffoldEndpoint: Endpoint = {
     const runsUrl = result.runsUrl ?? result.runUrl
     if (!result.ok) {
       return json(
-        { ok: false, message: result.error ?? 'CI dispatch failed.', runsUrl, runUrl: result.runUrl },
+        {
+          ok: false,
+          message: result.error ?? 'CI dispatch failed.',
+          runsUrl,
+          runUrl: result.runUrl,
+          ciProvider: result.ciProvider,
+        },
         result.status,
       )
     }
@@ -138,6 +146,7 @@ export const scaffoldEndpoint: Endpoint = {
       message: `Scaffold dispatched for "${tenant.slug}". A pull request will appear on GitHub within ~30 seconds. Merge it to bring the new tenant online.`,
       runsUrl,
       runUrl: result.runUrl,
+      ciProvider: result.ciProvider,
     })
   },
 }
@@ -164,6 +173,7 @@ export const deployEndpoint: Endpoint = {
           : result.message,
         runsUrl: result.runsUrl,
         runUrl: result.runUrl,
+        ciProvider: result.ciProvider,
       },
       result.status,
     )

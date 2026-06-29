@@ -7,6 +7,7 @@ export interface CiDispatchResult {
   error?: string
   runUrl?: string | null
   runsUrl?: string | null
+  ciProvider?: CiProviderId
   /** GitHub-only: retried with legacy workflow inputs. */
   usedLegacyWorkflowInputs?: boolean
 }

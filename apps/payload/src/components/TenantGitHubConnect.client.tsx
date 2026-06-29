@@ -3,12 +3,15 @@
 import { useDocumentInfo } from '@payloadcms/ui'
 import { useState } from 'react'
 
+import { ciViewRunLabel, type CiProviderId } from '../lib/ci/ciBuildLinks'
+
 type ApiResult = {
   ok: boolean
   message: string
   notes?: string[]
   runsUrl?: string | null
   runUrl?: string | null
+  ciProvider?: CiProviderId
 }
 
 type Action = 'validate-github' | 'setup-github-repo' | 'import-blog-from-repo'
@@ -43,6 +46,7 @@ export function TenantGitHubConnect(): React.ReactElement {
         notes: body.notes,
         runsUrl: body.runsUrl ?? null,
         runUrl: body.runUrl ?? null,
+        ciProvider: body.ciProvider,
       })
     } catch (err) {
       setResult({
@@ -115,7 +119,7 @@ export function TenantGitHubConnect(): React.ReactElement {
           ) : null}
           {result.runUrl ? (
             <a href={result.runUrl} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 8 }}>
-              View workflow run
+              {ciViewRunLabel(result.ciProvider, result.runUrl)}
             </a>
           ) : null}
         </div>

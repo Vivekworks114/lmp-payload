@@ -15,6 +15,7 @@ export interface DispatchTenantDeployResult {
   message: string
   runsUrl?: string | null
   runUrl?: string | null
+  ciProvider?: CiDispatchResult['ciProvider']
   error?: string
   deployMode?: DeployMode
   deployTarget?: string
@@ -112,6 +113,7 @@ export async function dispatchTenantDeployWithPayload(
           `Update tenant-deploy on branch "${ghBranch}", then try again.`,
         runsUrl,
         runUrl: result.runUrl,
+        ciProvider: result.ciProvider,
         error: result.error,
         deployMode,
       }
@@ -123,6 +125,7 @@ export async function dispatchTenantDeployWithPayload(
       message: result.error ?? 'CI dispatch failed.',
       runsUrl,
       runUrl: result.runUrl,
+      ciProvider: result.ciProvider,
       error: result.error,
     }
   }
@@ -154,6 +157,7 @@ export async function dispatchTenantDeployWithPayload(
     message,
     runsUrl,
     runUrl: result.runUrl,
+    ciProvider: result.ciProvider,
     deployMode,
     deployTarget: targetLabel,
   }

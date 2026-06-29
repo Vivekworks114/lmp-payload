@@ -2,6 +2,7 @@
 
 import { useFormFields } from '@payloadcms/ui'
 
+import { ciViewLatestRunLabel } from '../lib/ci/ciBuildLinks'
 import { productionUrlFromDomain } from '../lib/tenantDeployStatus'
 
 /**
@@ -49,7 +50,7 @@ export function TenantDeployLinks(): React.ReactElement {
         {lastDeployRunUrl ? (
           <div style={{ marginTop: 6 }}>
             <a href={lastDeployRunUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
-              View GitHub Actions run →
+              {ciViewLatestRunLabel(undefined, lastDeployRunUrl)}
             </a>
           </div>
         ) : null}
