@@ -44,3 +44,10 @@ fi
 export CLIENT_GITHUB_TOKEN="$TOKEN"
 export CLIENT_GITHUB_TOKEN_SOURCE="$TOKEN_SOURCE"
 echo "Client GitHub token resolved (source=${TOKEN_SOURCE}, length ${#TOKEN}, tenant=${TENANT:-<unset>})"
+
+# Persist for any subprocess that cannot source this script (optional reload).
+TOOLS_DIR="${JENKINS_TOOLS_DIR:-${HOME:-/tmp}/.jenkins-tools}"
+mkdir -p "$TOOLS_DIR"
+printf 'export CLIENT_GITHUB_TOKEN=%q\nexport CLIENT_GITHUB_TOKEN_SOURCE=%q\n' \
+  "$TOKEN" "$TOKEN_SOURCE" > "$TOOLS_DIR/client-github-token.env"
+chmod 600 "$TOOLS_DIR/client-github-token.env"

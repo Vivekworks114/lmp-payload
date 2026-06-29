@@ -15,9 +15,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GITHUB_REPO="$(bash "$SCRIPT_DIR/normalize-github-repo.sh" "$RAW_REPO")"
 export GITHUB_REPO
 
-TOKEN="${CLIENT_GITHUB_TOKEN:-${EXTERNAL_REPO_GITHUB_TOKEN:-}}"
+TOKEN="${CLIENT_GITHUB_TOKEN:-}"
+if [ -z "$TOKEN" ] && [ -f "${JENKINS_TOOLS_DIR:-${HOME:-/tmp}/.jenkins-tools}/client-github-token.env" ]; then
+  # shellcheck disable=SC1090
+  source "${JENKINS_TOOLS_DIR:-${HOME:-/tmp}/.jenkins-tools}/client-github-token.env"
+  TOKEN="${CLIENT_GITHUB_TOKEN:-}"
+fi
 if [ -z "$TOKEN" ]; then
-  echo "No CLIENT_GITHUB_TOKEN — run resolve-client-github-token.sh first" >&2
+  TOKEN="${EXTERNAL_REPO_GITHUB_TOKEN:-}"
+fi
+if [ -z "$TOKEN" ]; then
+  echo "No CLIENT_GITHUB_TOKEN — run resolve-client-github-token.sh first (must source, not bash)" >&2
   exit 1
 fi
 

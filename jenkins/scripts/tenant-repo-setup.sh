@@ -23,7 +23,9 @@ cd "$WORKSPACE"
 
 bash "$SCRIPT_DIR/checkout-platform.sh"
 export GH_FALLBACK_TOKEN="${EXTERNAL_REPO_GITHUB_TOKEN:-}"
-bash "$SCRIPT_DIR/resolve-client-github-token.sh"
+export GH_FALLBACK_TOKEN="${EXTERNAL_REPO_GITHUB_TOKEN:-}"
+# shellcheck source=resolve-client-github-token.sh
+source "$SCRIPT_DIR/resolve-client-github-token.sh"
 bash "$SCRIPT_DIR/checkout-client-repo.sh"
 
 SRC="$WORKSPACE/platform/templates/site-integration"

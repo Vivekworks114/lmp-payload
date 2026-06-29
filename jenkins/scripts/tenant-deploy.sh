@@ -34,7 +34,8 @@ pnpm install --frozen-lockfile
 
 if [ "$DEPLOY_MODE" = "external" ] && [ -n "$GITHUB_REPO" ]; then
   export GH_FALLBACK_TOKEN="${EXTERNAL_REPO_GITHUB_TOKEN:-}"
-  bash "$SCRIPT_DIR/resolve-client-github-token.sh"
+  # shellcheck source=resolve-client-github-token.sh
+  source "$SCRIPT_DIR/resolve-client-github-token.sh"
   bash "$SCRIPT_DIR/checkout-client-repo.sh"
   SITE_ROOT="$WORKSPACE/site"
 else
