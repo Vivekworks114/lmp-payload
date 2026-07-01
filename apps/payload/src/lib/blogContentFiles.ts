@@ -145,6 +145,29 @@ function resolveImportDescription(
   return title.slice(0, 500) || 'Blog post'
 }
 
+function parseImportDate(value: unknown): Date | null {
+  if (value == null) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+  const trimmed = String(value).trim()
+  if (!trimmed) return null
+  const parsed = new Date(trimmed)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/** pubDate is required on blog-posts — fall back through common frontmatter keys. */
+function resolveImportPubDate(known: Record<string, unknown>): string {
+  for (const key of ['pubDate', 'date'] as const) {
+    const parsed = parseImportDate(known[key])
+    if (parsed) return parsed.toISOString()
+  }
+  return new Date().toISOString()
+}
+
+function resolveImportUpdatedDate(known: Record<string, unknown>): string | undefined {
+  const parsed = parseImportDate(known.updatedDate)
+  return parsed ? parsed.toISOString() : undefined
+}
+
 export function blogPostDataFromFile(
   raw: string,
   slug: string,
@@ -155,9 +178,7 @@ export function blogPostDataFromFile(
   const title = nonEmptyString(known.title) ?? slug
   const description = resolveImportDescription(known, extra, rawBody, title)
   const body = sanitizeMarkdownForAstro(rawBody, { title })
-  const pubDate = known.pubDate
-    ? new Date(String(known.pubDate)).toISOString()
-    : new Date().toISOString()
+  const pubDate = resolveImportPubDate(known)
 
   const categories = Array.isArray(known.categories)
     ? (known.categories as string[]).map((value) => ({ value }))
@@ -188,7 +209,7 @@ export function blogPostDataFromFile(
     description,
     publishStatus: 'published',
     pubDate,
-    updatedDate: known.updatedDate ? new Date(String(known.updatedDate)).toISOString() : undefined,
+    updatedDate: resolveImportUpdatedDate(known),
     author: known.author ? String(known.author) : undefined,
     categories,
     tags,

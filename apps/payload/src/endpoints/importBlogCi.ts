@@ -93,38 +93,56 @@ export const importBlogContentEndpoint: Endpoint = {
 
     let created = 0
     let updated = 0
+    const failures: string[] = []
 
     for (const { filename, content } of posts) {
-      const postSlug = slugFromBlogFilename(filename)!
-      const baseData = blogPostDataFromFile(content, postSlug, tenantId)
+      try {
+        const postSlug = slugFromBlogFilename(filename)!
+        const baseData = blogPostDataFromFile(content, postSlug, tenantId)
 
-      const found = await req.payload.find({
-        collection: 'blog-posts',
-        where: {
-          and: [{ tenant: { equals: tenantId } }, { slug: { equals: postSlug } }],
-        },
-        limit: 1,
-        depth: 0,
-        overrideAccess: true,
-      })
-
-      const existing = found.docs[0]
-      if (existing) {
-        await req.payload.update({
+        const found = await req.payload.find({
           collection: 'blog-posts',
-          id: existing.id,
-          data: baseData as never,
+          where: {
+            and: [{ tenant: { equals: tenantId } }, { slug: { equals: postSlug } }],
+          },
+          limit: 1,
+          depth: 0,
           overrideAccess: true,
         })
-        updated++
-      } else {
-        await req.payload.create({
-          collection: 'blog-posts',
-          data: baseData as never,
-          overrideAccess: true,
-        })
-        created++
+
+        const existing = found.docs[0]
+        if (existing) {
+          await req.payload.update({
+            collection: 'blog-posts',
+            id: existing.id,
+            data: baseData as never,
+            overrideAccess: true,
+          })
+          updated++
+        } else {
+          await req.payload.create({
+            collection: 'blog-posts',
+            data: baseData as never,
+            overrideAccess: true,
+          })
+          created++
+        }
+      } catch (err) {
+        failures.push(
+          `${filename}: ${err instanceof Error ? err.message : String(err)}`,
+        )
       }
+    }
+
+    if (created === 0 && updated === 0 && failures.length > 0) {
+      return json(
+        {
+          ok: false,
+          message: 'Import failed for all posts in batch.',
+          failures,
+        },
+        500,
+      )
     }
 
     if (created > 0 || updated > 0) {
@@ -141,6 +159,7 @@ export const importBlogContentEndpoint: Endpoint = {
       created,
       updated,
       fileCount: posts.length,
+      ...(failures.length > 0 ? { failures } : {}),
     })
   },
 }
