@@ -2,7 +2,12 @@
  * Shared helpers for blog content files (.md and .mdx) in Astro repos.
  */
 
-import { resolveBlogSlug, sanitizeBlogSlug, sanitizeMarkdownForAstro } from '@astropayload/payload-sdk/formatters'
+import {
+  normalizeFrontmatterArrayFields,
+  resolveBlogSlug,
+  sanitizeBlogSlug,
+  sanitizeMarkdownForAstro,
+} from '@astropayload/payload-sdk/formatters'
 
 import { markdownToLexicalState } from './markdownToLexical'
 
@@ -196,6 +201,8 @@ export function blogPostDataFromFile(
   if (thumbnail && !importExtra.featuredImage) importExtra.featuredImage = thumbnail
   const heroImage = nonEmptyString(known.heroImage)
   if (heroImage) importExtra.heroImage = heroImage
+
+  normalizeFrontmatterArrayFields(importExtra)
 
   const fileSlug = sanitizeBlogSlug(slug)
   const postSlug = known.slug

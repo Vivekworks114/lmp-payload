@@ -1,7 +1,9 @@
 import { lexicalToMarkdown } from '../lexical'
 
+import { normalizeFrontmatterArrayFields } from './frontmatterArrays'
 import { resolveBlogSlug, sanitizeBlogSlug } from './sanitizeBlogSlug'
 import { sanitizeMarkdownForAstro } from './sanitizeMarkdownForAstro'
+import { sanitizeMarkdownForMdx } from './sanitizeMarkdownForMdx'
 
 /**
  * Frontmatter for Astro blog collections. Supports:
@@ -117,7 +119,11 @@ export function formatBlogMarkdown(
     frontmatter.date = pubDate ?? normalizeFrontmatterDate(doc.pubDate)
   }
 
-  const md = sanitizeMarkdownForAstro(lexicalToMarkdown(doc.content), { title: doc.title })
+  const rawMd = lexicalToMarkdown(doc.content)
+  const md =
+    extension === 'mdx'
+      ? sanitizeMarkdownForMdx(rawMd, { title: doc.title })
+      : sanitizeMarkdownForAstro(rawMd, { title: doc.title })
   if (!frontmatter.featuredImage) {
     const fromContent = firstImageFromLexical(doc.content) ?? firstImageFromMarkdown(md)
     if (fromContent) frontmatter.featuredImage = fromContent
@@ -125,6 +131,8 @@ export function formatBlogMarkdown(
   if (!frontmatter.featuredImage && opts?.fallbackFeaturedImage) {
     frontmatter.featuredImage = opts.fallbackFeaturedImage
   }
+
+  normalizeFrontmatterArrayFields(frontmatter)
 
   const yaml = toYaml(frontmatter)
   return {
