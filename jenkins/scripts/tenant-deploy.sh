@@ -23,6 +23,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE="${WORKSPACE:-$(pwd)}"
 cd "$WORKSPACE"
 
+# Astro content sync can exceed Node's default ~4GB heap for large blog collections.
+ensure_astro_heap() {
+  if [[ "${NODE_OPTIONS:-}" != *"--max-old-space-size"* ]]; then
+    export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=${ASTRO_BUILD_HEAP_MB:-8192}"
+  fi
+}
+
 bash "$SCRIPT_DIR/checkout-platform.sh"
 PLATFORM="$WORKSPACE/platform"
 cd "$PLATFORM"
@@ -85,6 +92,7 @@ if [ "$DEPLOY_MODE" = "external" ]; then
   fi
 
   export TENANT
+  ensure_astro_heap
   if [ "$PKG" = "pnpm" ]; then pnpm run build; else npm run build; fi
 
   # Deploy only — do not run "npm run deploy" (may re-build or trigger wrangler init).
@@ -111,6 +119,7 @@ else
   FILTER="@astropayload/site-${TENANT}"
   cd "$PLATFORM"
   pnpm --filter "$FILTER" sync:content
+  ensure_astro_heap
   pnpm --filter "$FILTER" build
   pnpm --filter "$FILTER" deploy 2>&1 | tee deploy.log
   WORKERS_URL="$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | tail -1 || true)"

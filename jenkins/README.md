@@ -2,6 +2,8 @@
 
 Move all tenant pipelines off GitHub Actions onto your Jenkins VPS. Payload admin chooses the backend under **Globals → Platform settings → CI provider**.
 
+**→ Full guide: [GITHUB-TO-JENKINS.md](./GITHUB-TO-JENKINS.md)** — converting GitHub Actions YAML to Jenkinsfiles, triggered jobs, and cron schedulers.
+
 ## Architecture
 
 ```
@@ -128,5 +130,6 @@ After Jenkins is verified, disable or remove `.github/workflows/*.yml` triggers 
 | `tenant-deploy is not parameterized` | Run each Pipeline job **Build Now** once so Jenkins loads parameters from the Jenkinsfile; then **Build with Parameters** appears and Payload can trigger deploys |
 | `github.com/https://github.com/...` on clone | `github_repo` must be `owner/repo` (Payload sends this automatically); if testing manually, use `Vivekworks114/cosmeticaspecialisten` not the full URL |
 | Wrangler tries `astro add cloudflare` in CI | Client repo needs `wrangler.toml`, `@astrojs/cloudflare`, and `wrangler` devDependency committed — CI runs `build` then `wrangler deploy` only |
+| `JavaScript heap out of memory` during `astro build` | `tenant-deploy.sh` sets `NODE_OPTIONS=--max-old-space-size=8192` before build; ensure the Jenkins agent has ≥10GB RAM or lower `ASTRO_BUILD_HEAP_MB` |
 | `ERROR: astropayload-…` | Create the missing **Secret text** credential ID from section 4 (exact spelling) |
 | Crumb / CSRF errors | `jenkinsDispatch.ts` sends Jenkins crumb automatically |

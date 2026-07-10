@@ -165,6 +165,8 @@ jobs:
       - name: Build (monorepo)
         if: env.DEPLOY_MODE != 'external'
         working-directory: platform
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm --filter ${{ steps.monorepo.outputs.filter }} build
 
       - name: Build (external)
@@ -172,6 +174,7 @@ jobs:
         working-directory: site
         env:
           TENANT: ${{ env.TENANT }}
+          NODE_OPTIONS: --max-old-space-size=8192
         run: |
           if [ "${{ env.pkg }}" = "pnpm" ]; then pnpm run build; else npm run build; fi
 
