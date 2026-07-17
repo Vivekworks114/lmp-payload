@@ -162,6 +162,21 @@ jobs:
             echo "pkg=npm" >> "$GITHUB_ENV"
           fi
 
+      # Optional multiline dotenv on the *platform* repo (Jenkins is preferred for multi-tenant).
+      - name: Write optional client build env (external)
+        if: env.DEPLOY_MODE == 'external'
+        working-directory: site
+        env:
+          CLIENT_BUILD_ENV: ${{ secrets.CLIENT_BUILD_ENV }}
+        run: |
+          if [ -z "${CLIENT_BUILD_ENV:-}" ]; then
+            echo "No CLIENT_BUILD_ENV platform secret — skipping (use Jenkins for per-tenant env)"
+            exit 0
+          fi
+          printf '%s\n' "$CLIENT_BUILD_ENV" > .env
+          chmod 600 .env
+          echo "Wrote site/.env from CLIENT_BUILD_ENV (keys not logged)"
+
       - name: Build (monorepo)
         if: env.DEPLOY_MODE != 'external'
         working-directory: platform

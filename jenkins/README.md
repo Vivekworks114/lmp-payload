@@ -92,6 +92,18 @@ Create these under **Manage Jenkins → Credentials** as **Secret text** (unless
 
 Optional: set global env `PAYLOAD_API_KEY` on Jenkins if you prefer API key auth over `DEPLOY_REPORT_TOKEN` (not required when the report token is set).
 
+### Per-tenant client build env (Astro `import.meta.env` / `.env`)
+
+External sites (e.g. **10reviews**) often need keys like `PUBLIC_HCAPTCHA_SITEKEY`, `HCAPTCHA_SECRET`, `WEB3FORMS_API_KEY`. GitHub client-repo secrets are **not** visible to Jenkins. Provide them in one of these ways (first match wins):
+
+1. **Jenkins Secret file** credential ID: `astropayload-site-env-<tenant_slug>`  
+   Contents = dotenv (`KEY=value` lines). See [client-env.example.env](./client-env.example.env).  
+   Example id for 10reviews: `astropayload-site-env-10reviews`
+2. **Agent file drop**: `$JENKINS_HOME/astropayload-client-env/<tenant_slug>.env`  
+   (override directory with Jenkins env `ASTROPAYLOAD_CLIENT_ENV_DIR`)
+
+On deploy, `tenant-deploy.sh` loads that file and writes `site/.env` before `astro build` (keys are logged by **name only**).
+
 Optional: set global env on Jenkins (only needed if scripts run outside Pipeline-from-SCM):
 
 | Name | Example |
@@ -131,5 +143,6 @@ After Jenkins is verified, disable or remove `.github/workflows/*.yml` triggers 
 | `github.com/https://github.com/...` on clone | `github_repo` must be `owner/repo` (Payload sends this automatically); if testing manually, use `Vivekworks114/cosmeticaspecialisten` not the full URL |
 | Wrangler tries `astro add cloudflare` in CI | Client repo needs `wrangler.toml`, `@astrojs/cloudflare`, and `wrangler` devDependency committed — CI runs `build` then `wrangler deploy` only |
 | `JavaScript heap out of memory` during `astro build` | `tenant-deploy.sh` sets `NODE_OPTIONS=--max-old-space-size=8192` before build; ensure the Jenkins agent has ≥10GB RAM or lower `ASTRO_BUILD_HEAP_MB` |
+| Contact form / `import.meta.env` empty after deploy | Add Secret file `astropayload-site-env-<slug>` (or `$JENKINS_HOME/astropayload-client-env/<slug>.env`) with the site’s dotenv keys |
 | `ERROR: astropayload-…` | Create the missing **Secret text** credential ID from section 4 (exact spelling) |
 | Crumb / CSRF errors | `jenkinsDispatch.ts` sends Jenkins crumb automatically |

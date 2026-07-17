@@ -92,6 +92,9 @@ if [ "$DEPLOY_MODE" = "external" ]; then
   fi
 
   export TENANT
+  # Optional per-tenant dotenv (hCaptcha, Web3Forms, PUBLIC_*, etc.) → SITE_ROOT/.env
+  # shellcheck source=load-client-build-env.sh
+  source "$SCRIPT_DIR/load-client-build-env.sh"
   ensure_astro_heap
   if [ "$PKG" = "pnpm" ]; then pnpm run build; else npm run build; fi
 
@@ -119,6 +122,9 @@ else
   FILTER="@astropayload/site-${TENANT}"
   cd "$PLATFORM"
   pnpm --filter "$FILTER" sync:content
+  # Optional per-tenant dotenv for monorepo sites
+  # shellcheck source=load-client-build-env.sh
+  source "$SCRIPT_DIR/load-client-build-env.sh"
   ensure_astro_heap
   pnpm --filter "$FILTER" build
   pnpm --filter "$FILTER" deploy 2>&1 | tee deploy.log
