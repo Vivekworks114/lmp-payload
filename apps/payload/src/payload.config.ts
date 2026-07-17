@@ -115,7 +115,7 @@ export default buildConfig({
       collection: 'users',
       forceSetup: true,
       totp: {
-        issuer: process.env.PAYLOAD_TOTP_ISSUER || 'astropayload',
+        issuer: process.env.PAYLOAD_TOTP_ISSUER || 'LMP',
       },
     }),
   ],
