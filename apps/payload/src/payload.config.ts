@@ -43,9 +43,13 @@ export default buildConfig({
     user: Users.slug,
     importMap: { baseDir: path.resolve(dirname) },
     meta: {
-      titleSuffix: ' — astropayload',
+      titleSuffix: ' — LPM Payload',
     },
     components: {
+      graphics: {
+        Logo: '/components/AdminBrand#AdminLogo',
+        Icon: '/components/AdminBrand#AdminIcon',
+      },
       providers: [
         {
           path: '@/components/TotpHardRedirect.client#TotpHardRedirect',
@@ -111,11 +115,13 @@ export default buildConfig({
     r2Plugin,
 
     // Must stay last — wraps access controls for TOTP verification on admin login.
+    // Issuer is hardcoded so a stale PAYLOAD_TOTP_ISSUER=astropayload on the server
+    // cannot keep showing the old name in authenticator apps.
     payloadTotp({
       collection: 'users',
       forceSetup: true,
       totp: {
-        issuer: process.env.PAYLOAD_TOTP_ISSUER || 'LMP',
+        issuer: 'LPM',
       },
     }),
   ],

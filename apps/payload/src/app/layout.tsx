@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'astropayload — CMS',
+  title: 'LPM Payload',
   description: 'Multi-tenant content platform.',
 }
 

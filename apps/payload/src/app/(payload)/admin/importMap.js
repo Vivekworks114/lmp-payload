@@ -31,6 +31,8 @@ import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { AssignTenantFieldTrigger as AssignTenantFieldTrigger_1d0591e3cf4f332c83a86da13a0de59a } from '@payloadcms/plugin-multi-tenant/client'
 import { GithubCredentialTokenPanel as GithubCredentialTokenPanel_14604bfe52e0ea2cdfe0b2ae3400c780 } from '../../../components/GithubCredentialTokenField.client'
+import { AdminIcon as AdminIcon_185d6ccbdba3821d35293b1570e8d361 } from '../../../components/AdminBrand'
+import { AdminLogo as AdminLogo_185d6ccbdba3821d35293b1570e8d361 } from '../../../components/AdminBrand'
 import { TenantSelector as TenantSelector_d6d5f193a167989e2ee7d14202901e62 } from '@payloadcms/plugin-multi-tenant/rsc'
 import { TotpHardRedirect as TotpHardRedirect_fab6ed02d59f1a0544cd479b3705598b } from '@/components/TotpHardRedirect.client'
 import { TenantSelectionProvider as TenantSelectionProvider_d6d5f193a167989e2ee7d14202901e62 } from '@payloadcms/plugin-multi-tenant/rsc'
@@ -75,6 +77,8 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/plugin-multi-tenant/client#AssignTenantFieldTrigger": AssignTenantFieldTrigger_1d0591e3cf4f332c83a86da13a0de59a,
   "/components/GithubCredentialTokenField.client#GithubCredentialTokenPanel": GithubCredentialTokenPanel_14604bfe52e0ea2cdfe0b2ae3400c780,
+  "/components/AdminBrand#AdminIcon": AdminIcon_185d6ccbdba3821d35293b1570e8d361,
+  "/components/AdminBrand#AdminLogo": AdminLogo_185d6ccbdba3821d35293b1570e8d361,
   "@payloadcms/plugin-multi-tenant/rsc#TenantSelector": TenantSelector_d6d5f193a167989e2ee7d14202901e62,
   "@/components/TotpHardRedirect.client#TotpHardRedirect": TotpHardRedirect_fab6ed02d59f1a0544cd479b3705598b,
   "@payloadcms/plugin-multi-tenant/rsc#TenantSelectionProvider": TenantSelectionProvider_d6d5f193a167989e2ee7d14202901e62,
