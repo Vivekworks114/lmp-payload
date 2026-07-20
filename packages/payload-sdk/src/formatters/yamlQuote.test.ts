@@ -9,8 +9,12 @@ describe('quoteYamlScalar', () => {
     assert.equal(quoteYamlScalar('2024'), '"2024"')
   })
 
-  it('quotes YAML specials and dates', () => {
-    assert.equal(quoteYamlScalar('true'), '"true"')
+  it('leaves true/false unquoted for Astro boolean schemas (e.g. draft)', () => {
+    assert.equal(quoteYamlScalar('true'), 'true')
+    assert.equal(quoteYamlScalar('false'), 'false')
+  })
+
+  it('quotes null-like and dates', () => {
     assert.equal(quoteYamlScalar('null'), '"null"')
     assert.equal(quoteYamlScalar('2024-09-23'), '"2024-09-23"')
   })

@@ -138,6 +138,7 @@ export function formatBlogMarkdown(
   }
 
   normalizeFrontmatterArrayFields(frontmatter)
+  coerceFrontmatterBooleans(frontmatter)
 
   // Never emit `id` into markdown — Astro glob() uses `data.slug` as the entry id, and a
   // numeric WP `id` (or numeric-looking unquoted `slug`) makes `id.endsWith()` throw.
@@ -279,6 +280,25 @@ function normalizeFrontmatterDate(value: unknown): string | undefined {
   return d.toISOString().slice(0, 10)
 }
 
+/** Keys Astro / WP themes commonly type as boolean in content schemas. */
+const BOOLEAN_FRONTMATTER_KEYS = new Set(['draft', 'featured', 'published'])
+
+function coerceFrontmatterBooleans(fm: Record<string, unknown>): void {
+  for (const key of BOOLEAN_FRONTMATTER_KEYS) {
+    if (!(key in fm)) continue
+    const v = fm[key]
+    if (typeof v === 'boolean') continue
+    if (typeof v === 'string') {
+      const lower = v.trim().toLowerCase()
+      if (lower === 'true' || lower === 'yes' || lower === '1') fm[key] = true
+      else if (lower === 'false' || lower === 'no' || lower === '0') fm[key] = false
+    } else if (typeof v === 'number') {
+      if (v === 1) fm[key] = true
+      else if (v === 0) fm[key] = false
+    }
+  }
+}
+
 function toYaml(obj: Record<string, unknown>): string {
   const lines: string[] = []
   for (const [key, value] of Object.entries(obj)) {
@@ -286,6 +306,10 @@ function toYaml(obj: Record<string, unknown>): string {
     if (Array.isArray(value)) {
       lines.push(`${key}:`)
       for (const v of value) lines.push(`  - ${quoteYamlScalar(String(v))}`)
+    } else if (typeof value === 'boolean') {
+      lines.push(`${key}: ${value ? 'true' : 'false'}`)
+    } else if (typeof value === 'number' && Number.isFinite(value)) {
+      lines.push(`${key}: ${value}`)
     } else if (value instanceof Date) {
       lines.push(`${key}: ${value.toISOString()}`)
     } else {
