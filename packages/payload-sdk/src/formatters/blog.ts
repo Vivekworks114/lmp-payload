@@ -4,6 +4,9 @@ import { normalizeFrontmatterArrayFields } from './frontmatterArrays'
 import { resolveBlogSlug, sanitizeBlogSlug } from './sanitizeBlogSlug'
 import { sanitizeMarkdownForAstro } from './sanitizeMarkdownForAstro'
 import { sanitizeMarkdownForMdx } from './sanitizeMarkdownForMdx'
+import { quoteYamlScalar } from './yamlQuote'
+
+export { quoteYamlScalar } from './yamlQuote'
 
 /**
  * Frontmatter for Astro blog collections. Supports:
@@ -55,6 +58,8 @@ const RESERVED_FRONTMATTER_KEYS = new Set([
   'tags',
   'slug',
   'date',
+  // WP / CMS numeric ids break Astro content-layer (`id.endsWith is not a function`).
+  'id',
 ])
 
 export function formatBlogMarkdown(
@@ -133,6 +138,10 @@ export function formatBlogMarkdown(
   }
 
   normalizeFrontmatterArrayFields(frontmatter)
+
+  // Never emit `id` into markdown — Astro glob() uses `data.slug` as the entry id, and a
+  // numeric WP `id` (or numeric-looking unquoted `slug`) makes `id.endsWith()` throw.
+  delete frontmatter.id
 
   const yaml = toYaml(frontmatter)
   return {
@@ -276,17 +285,12 @@ function toYaml(obj: Record<string, unknown>): string {
     if (value === undefined || value === null) continue
     if (Array.isArray(value)) {
       lines.push(`${key}:`)
-      for (const v of value) lines.push(`  - ${quote(String(v))}`)
+      for (const v of value) lines.push(`  - ${quoteYamlScalar(String(v))}`)
     } else if (value instanceof Date) {
       lines.push(`${key}: ${value.toISOString()}`)
     } else {
-      lines.push(`${key}: ${quote(String(value))}`)
+      lines.push(`${key}: ${quoteYamlScalar(String(value))}`)
     }
   }
   return lines.join('\n') + '\n'
-}
-
-function quote(s: string): string {
-  if (/^[\w\d:./@-]+$/.test(s) && !/^\d{4}-\d{2}-\d{2}/.test(s)) return s
-  return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
